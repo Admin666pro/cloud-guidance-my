@@ -1,0 +1,15 @@
+# Cloudflare Pages configuration
+# Deploy with: npx wrangler pages deploy ./public
+
+name = "product-nav"
+
+compatibility_date = "2024-12-01"
+
+# Environment variables (set these in Cloudflare dashboard)
+# [vars]
+# ADMIN_PASSWORD = "your-secure-password-here"
+
+# KV Namespace (create in Cloudflare dashboard and bind here)
+# [[kv_namespaces]]
+# binding = "PRODUCTS_KV"
+# id = "your-kv-namespace-id"

@@ -1,0 +1,14 @@
+{
+  "name": "product-nav",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Product Navigation - iOS 26 Crystal Glass Design",
+  "scripts": {
+    "build": "echo 'Static site - no build needed'",
+    "start": "npx serve public -l 5000 -s",
+    "dev": "npx serve public -l 5000 -s"
+  },
+  "devDependencies": {
+    "serve": "^14.2.0"
+  }
+}

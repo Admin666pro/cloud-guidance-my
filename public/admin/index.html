@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理后台 — Product Nav</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .admin-page { display: none; }
+    .admin-page.active { display: block; }
+    #page-products { display: block; }
+  </style>
+</head>
+<body>
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+      <div class="sidebar-logo">
+        <span style="color:var(--accent-light)">◆</span>
+        Product Nav
+      </div>
+
+      <nav>
+        <button class="nav-item active" data-page="products">
+          <svg class="icon-svg" viewBox="0 0 24 24" width="18" height="18">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+            <line x1="12" y1="22.08" x2="12" y2="12"/>
+          </svg>
+          产品管理
+        </button>
+        <button class="nav-item" data-page="custom">
+          <svg class="icon-svg" viewBox="0 0 24 24" width="18" height="18">
+            <path d="m18 16 4-4-4-4"/>
+            <path d="m6 8-4 4 4 4"/>
+            <path d="m14.5 4-5 16"/>
+          </svg>
+          自定义代码
+        </button>
+        <button class="nav-item" data-page="settings">
+          <svg class="icon-svg" viewBox="0 0 24 24" width="18" height="18">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+          </svg>
+          设置
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a href="/" class="nav-item" style="color:var(--text-tertiary)">
+          <svg class="icon-svg" viewBox="0 0 24 24" width="18" height="18">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          返回首页
+        </a>
+        <button class="nav-item" id="btn-logout" style="color:#fca5a5">
+          <svg class="icon-svg" viewBox="0 0 24 24" width="18" height="18">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          退出登录
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="admin-main">
+      <!-- Products Page -->
+      <div class="admin-page active" id="page-products">
+        <div class="page-header">
+          <h1>产品管理</h1>
+          <button class="glass-btn glass-btn-primary" id="btn-add-product">
+            <svg class="icon-svg" viewBox="0 0 24 24" width="16" height="16">
+              <path d="M5 12h14"/><path d="M12 5v14"/>
+            </svg>
+            添加产品
+          </button>
+        </div>
+
+        <div class="glass" style="overflow:hidden;padding:0">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th style="width:40px">图标</th>
+                <th>名称</th>
+                <th>分类</th>
+                <th>描述</th>
+                <th style="width:200px">操作</th>
+              </tr>
+            </thead>
+            <tbody id="admin-products-body">
+              <tr>
+                <td colspan="5" style="text-align:center;padding:3rem;color:var(--text-tertiary)">加载中...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Custom Code Page -->
+      <div class="admin-page" id="page-custom">
+        <div class="page-header">
+          <h1>自定义代码</h1>
+          <button class="glass-btn glass-btn-primary" id="btn-save-code">
+            <svg class="icon-svg" viewBox="0 0 24 24" width="16" height="16">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+            保存代码
+          </button>
+        </div>
+
+        <div class="glass" style="padding:1.5rem;margin-bottom:1.5rem">
+          <p style="color:var(--text-secondary);font-size:0.875rem;margin-bottom:1rem">
+            在此添加自定义 CSS、JavaScript 和 HTML，这些代码将在首页加载时自动生效。修改后点击保存。
+          </p>
+
+          <div class="code-tabs">
+            <button class="code-tab active" data-lang="css">CSS</button>
+            <button class="code-tab" data-lang="js">JavaScript</button>
+            <button class="code-tab" data-lang="html">HTML</button>
+          </div>
+
+          <div class="code-editor-panel" id="editor-css" style="display:block">
+            <textarea class="code-editor" id="code-css" placeholder="/* 在此编写自定义 CSS */&#10;.my-custom-class { color: var(--cyan); }" spellcheck="false"></textarea>
+          </div>
+          <div class="code-editor-panel" id="editor-js" style="display:none">
+            <textarea class="code-editor" id="code-js" placeholder="// 在此编写自定义 JavaScript&#10;console.log('Hello from custom code!');" spellcheck="false"></textarea>
+          </div>
+          <div class="code-editor-panel" id="editor-html" style="display:none">
+            <textarea class="code-editor" id="code-html" placeholder="<!-- 在此编写自定义 HTML -->&#10;<div>自定义内容</div>" spellcheck="false"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings Page -->
+      <div class="admin-page" id="page-settings">
+        <div class="page-header">
+          <h1>设置</h1>
+        </div>
+
+        <div class="glass" style="padding:2rem">
+          <h3 style="margin-bottom:1rem;font-size:1.125rem;font-weight:600">关于此项目</h3>
+          <div style="display:flex;flex-direction:column;gap:1rem;color:var(--text-secondary);font-size:0.875rem">
+            <p>
+              <strong style="color:var(--text-primary)">Product Nav</strong> — 一款拥有 iOS 26 水晶玻璃质感的产品导航网站。
+            </p>
+            <p>
+              <strong>技术栈：</strong>纯静态 HTML + CSS + JavaScript，后端使用 Cloudflare Pages Functions。
+            </p>
+            <p>
+              <strong>数据存储：</strong>产品数据通过 Cloudflare KV 存储（需绑定），本地开发时自动降级到 localStorage。
+            </p>
+            <p>
+              <strong>管理员密码：</strong>通过 Cloudflare 环境变量 <code style="background:rgba(255,255,255,0.1);padding:0.2rem 0.5rem;border-radius:4px;font-size:0.75rem">ADMIN_PASSWORD</code> 配置。
+            </p>
+            <hr style="border-color:var(--glass-border);margin:0.5rem 0">
+            <p style="color:var(--text-tertiary);font-size:0.75rem">
+              版本 1.0.0
+            </p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
