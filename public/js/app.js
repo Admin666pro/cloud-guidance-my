@@ -1,5 +1,6 @@
 /* ============================================
    Product Nav — Main Application
+   Apple Design Language + Background Management
    ============================================ */
 
 // --- SVG Icons (inline) ---
@@ -17,6 +18,7 @@ const ICONS = {
   home: `<svg class="icon-svg" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
   box: `<svg class="icon-svg" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>`,
   tag: `<svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2z"/><path d="M7 7h.01"/></svg>`,
+  image: `<svg class="icon-svg" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>`,
 };
 
 // --- State ---
@@ -24,9 +26,53 @@ let products = [];
 let customCSS = '';
 let customJS = '';
 let customHTML = '';
+let bgImageUrl = '';
+let glassEnabled = true;
 
 // --- API Config ---
 const API_BASE = '/api';
+
+// --- Background Management ---
+function getBgSettings() {
+  try {
+    bgImageUrl = localStorage.getItem('bg_image_url') || '';
+    glassEnabled = localStorage.getItem('bg_glass_enabled') !== 'false'; // default true
+  } catch {
+    bgImageUrl = '';
+    glassEnabled = true;
+  }
+}
+
+function saveBgSettings(url, glass) {
+  bgImageUrl = url;
+  glassEnabled = glass;
+  try {
+    localStorage.setItem('bg_image_url', url || '');
+    localStorage.setItem('bg_glass_enabled', glass ? 'true' : 'false');
+  } catch (e) {
+    console.warn('Failed to save bg settings:', e);
+  }
+}
+
+function applyBgSettings() {
+  getBgSettings();
+
+  // Apply background image
+  if (bgImageUrl) {
+    document.body.style.setProperty('--bg-image', `url(${bgImageUrl})`);
+    document.body.classList.add('has-bg-image');
+  } else {
+    document.body.style.removeProperty('--bg-image');
+    document.body.classList.remove('has-bg-image');
+  }
+
+  // Apply glass toggle
+  if (!glassEnabled) {
+    document.body.classList.add('no-glass');
+  } else {
+    document.body.classList.remove('no-glass');
+  }
+}
 
 // --- Toast ---
 function showToast(message, type = 'success') {
@@ -110,11 +156,9 @@ function requireAuth() {
 // --- Products CRUD (Public) ---
 async function fetchProducts() {
   try {
-    // Try the API first (if deployed on Cloudflare)
     const data = await apiRequest('/products');
     products = data.products || [];
   } catch {
-    // Fallback to localStorage for local dev
     try {
       products = JSON.parse(localStorage.getItem('products') || '[]');
     } catch {
@@ -154,7 +198,6 @@ async function adminAddProduct(product) {
       body: JSON.stringify({ product: newProduct }),
     });
   } catch {
-    // Fallback to localStorage
     const existing = JSON.parse(localStorage.getItem('products') || '[]');
     existing.push(newProduct);
     localStorage.setItem('products', JSON.stringify(existing));
@@ -273,7 +316,7 @@ function renderProducts(productsToRender, containerId = 'products-grid') {
   }
 
   grid.innerHTML = productsToRender.map((product, idx) => `
-    <div class="product-card" style="animation-delay: ${idx * 0.05}s">
+    <div class="product-card" style="animation-delay: ${idx * 0.03}s">
       <div class="product-card-inner" onclick="window.open('${product.url || '#'}', '_blank')">
         <div class="product-icon">${product.icon || '📦'}</div>
         <h3 class="product-title">${escapeHtml(product.name)}</h3>
@@ -325,6 +368,9 @@ async function initMainPage() {
   } catch (e) {
     console.warn('Init error:', e);
   }
+
+  // Apply background settings
+  applyBgSettings();
 
   // Apply custom code
   applyCustomCode();
@@ -423,6 +469,9 @@ async function initAdminDashboard() {
 
   // Init code editor
   initCodeEditor();
+
+  // Init background settings
+  initBgSettings();
 }
 
 // --- Render Admin Products ---
@@ -646,6 +695,50 @@ function initCodeEditor() {
       }
       showToast('自定义代码已保存');
     });
+  }
+}
+
+// --- Background Settings (Admin) ---
+function initBgSettings() {
+  const urlInput = document.getElementById('bg-image-url');
+  const toggleGlass = document.getElementById('toggle-glass');
+  const saveBtn = document.getElementById('btn-save-bg');
+  const preview = document.getElementById('bg-preview');
+
+  if (!urlInput) return;
+
+  // Load current settings
+  getBgSettings();
+  urlInput.value = bgImageUrl;
+  if (toggleGlass) toggleGlass.checked = glassEnabled;
+  updateBgPreview(urlInput.value);
+
+  // Live preview on URL change
+  urlInput.addEventListener('input', () => {
+    updateBgPreview(urlInput.value);
+  });
+
+  // Save button
+  if (saveBtn) {
+    saveBtn.addEventListener('click', () => {
+      const url = urlInput.value.trim();
+      const glass = toggleGlass ? toggleGlass.checked : true;
+      saveBgSettings(url, glass);
+      showToast('背景设置已保存');
+    });
+  }
+}
+
+function updateBgPreview(url) {
+  const preview = document.getElementById('bg-preview');
+  if (!preview) return;
+
+  if (url.trim()) {
+    preview.style.setProperty('--bg-image-preview', `url(${url.trim()})`);
+    preview.classList.add('has-image');
+  } else {
+    preview.style.removeProperty('--bg-image-preview');
+    preview.classList.remove('has-image');
   }
 }
 

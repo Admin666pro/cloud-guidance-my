@@ -1,6 +1,6 @@
 ## 项目概述
 
-Product Nav — 产品导航网站，具有 iOS 26 水晶玻璃质感设计风格（Apple 设计语言）。支持管理员通过密码登录后台进行产品 CRUD 管理，以及自定义 JS/CSS/HTML 代码注入。
+Product Nav — 产品导航网站，采用 Apple 设计语言 + iOS 26 水晶玻璃质感（Glassmorphism）。支持管理员通过密码登录后台进行产品 CRUD 管理、自定义 JS/CSS/HTML 代码注入、以及背景图片与玻璃质感效果开关控制。
 
 ## 技术栈
 
@@ -47,7 +47,7 @@ Product Nav — 产品导航网站，具有 iOS 26 水晶玻璃质感设计风�
 ### 页面
 - **首页 `/`**：产品展示网格，支持搜索和分类筛选，加载自定义代码
 - **登录 `/admin/login.html`**：管理员密码登录
-- **后台 `/admin/`**：产品管理（增删改查）+ 自定义代码编辑器（CSS/JS/HTML）
+- **后台 `/admin/`**：产品管理（增删改查）+ 自定义代码编辑器（CSS/JS/HTML）+ 背景设置（图片 URL + 玻璃质感开关）
 
 ### API 端点（Cloudflare Pages Functions）
 - `POST /api/auth` — 管理员登录验证，返回 token
@@ -81,6 +81,7 @@ Product Nav — 产品导航网站，具有 iOS 26 水晶玻璃质感设计风�
 - 本地开发时自动降级到 localStorage，无需 Cloudflare 环境
 - 产品数据在本地开发时存储在 localStorage，部署后由 KV 持久化
 - 自定义代码同样支持本地 localStorage 和 KV 双存储
+- 背景设置（背景图片 URL + 玻璃质感开关）存储在 localStorage / KV，首页与管理后台同步生效
 
 ## 常见问题和预防
 
