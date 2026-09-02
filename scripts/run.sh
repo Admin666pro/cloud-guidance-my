@@ -12,4 +12,4 @@ fuser -k "${PORT}/tcp" 2>/dev/null || true
 sleep 1
 
 echo "Starting server on port ${PORT}..."
-exec npx serve public -l "$PORT" -s --cors
+exec npx serve public -l "$PORT" --cors
