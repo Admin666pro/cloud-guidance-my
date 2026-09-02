@@ -90,3 +90,6 @@ Product Nav — 产品导航网站，采用 Apple 设计语言 + iOS 26 水晶�
 - **API 调用**：前端使用相对路径 `/api/...`，不硬编码域名
 - **Token 过期**：登录 token 有效期 24 小时，过期需重新登录
 - **本地开发**：没有 Cloudflare 环境时，所有 API 自动降级到 localStorage
+- **本地登录密码**：默认 `admin123`，可在浏览器 localStorage 中设置 `admin_password` 覆盖
+- **Cloudflare 登录问题**：确保环境变量名是 `ADMIN_PASSWORD`，设置后需重新部署才能生效
+- **`_routes.json`**：位于 `public/` 目录，确保 `/api/*` 路由正确触发 Cloudflare Functions

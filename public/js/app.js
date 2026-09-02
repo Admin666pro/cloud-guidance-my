@@ -232,11 +232,23 @@ async function adminDeleteProduct(id) {
 }
 
 async function adminLogin(password) {
-  const data = await apiRequest('/auth', {
-    method: 'POST',
-    body: JSON.stringify({ password }),
-  });
-  return data;
+  // Try Cloudflare API first
+  try {
+    const data = await apiRequest('/auth', {
+      method: 'POST',
+      body: JSON.stringify({ password }),
+    });
+    return data;
+  } catch (err) {
+    // Local fallback: check against localStorage password
+    const localPassword = localStorage.getItem('admin_password') || 'admin123';
+    if (password === localPassword) {
+      // Create a simple local token
+      const token = btoa(JSON.stringify({ sub: 'admin', ts: Date.now() }));
+      return { token, success: true };
+    }
+    throw err; // Re-throw if password doesn't match locally either
+  }
 }
 
 // --- Custom Code API ---
