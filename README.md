@@ -78,12 +78,28 @@ bash scripts/run.sh
 
 ### 什么是「构建」？
 
-Cloudflare Pages 的构建分为两步：
+Cloudflare Pages 部署时，会执行以下步骤：
 
-1. **构建命令（Build Command）** — 在服务器上执行的命令，用于生成最终可部署的文件。本项目是纯静态 HTML/CSS/JS，无需编译打包，所以构建命令留空即可。
-2. **构建输出目录（Build Output Directory）** — 告诉 Cloudflare 构建完成后，成品文件放在哪个文件夹里。本项目输出目录为 `public`，因为所有 HTML/CSS/JS 文件都直接放在 `public/` 下。
+1. **克隆代码** — 从 GitHub 拉取你的仓库
+2. **执行构建命令（Build Command）** — 在服务器上运行你指定的命令，用于安装依赖、编译文件等
+3. **读取构建输出目录（Build Output Directory）** — 从指定文件夹中取出成品文件进行部署
+4. **识别 Functions** — 自动扫描根目录下的 `functions/` 文件夹，部署为 Serverless API
 
-> 简单理解：**构建命令 = 怎么做**，**构建输出目录 = 成品放在哪**。本项目已经是成品，所以只需告诉 Cloudflare 成品在哪（`public`），不需要执行任何构建命令。
+### 本项目构建命令：`pnpm install`
+
+> **为什么需要这个命令？** 虽然本项目是纯静态 HTML/CSS/JS，但 `functions/` 目录下的 Cloudflare Pages Functions 使用了 `package.json` 中声明的依赖（如 `serve` 仅在本地使用，但 Cloudflare 构建环境需要识别 `package.json` 来确认项目结构）。执行 `pnpm install` 可以确保构建环境正确识别项目依赖，避免构建失败。
+
+### 构建配置总表
+
+| 字段 | 填写内容 | 原因 |
+|---|---|---|
+| **构建命令** | `pnpm install` | 安装项目依赖，确保构建环境正确识别项目结构 |
+| **构建输出目录** | `public` | 所有 HTML/CSS/JS 静态文件都放在 `public/` 下 |
+| **根目录** | 留空 | 项目文件在仓库根目录，无需指定子目录 |
+
+> ⚠️ **特别注意**：构建输出目录必须填 `public`，不能填 `./public`、`/public` 或其他路径。
+> 
+> ⚠️ **构建命令不要留空**，即使项目没有编译步骤，也需要 `pnpm install` 来让 Cloudflare 正确识别项目。
 
 ### 部署方式对比
 
@@ -106,7 +122,7 @@ Cloudflare Pages 的构建分为两步：
 5. 构建设置：
    - **项目名称**：`product-nav`（可自定义）
    - **生产分支**：`main`
-   - **构建命令**：留空（本项目无需构建）
+   - **构建命令**：`pnpm install`（**必须填写，不能留空**）
    - **构建输出目录**：`public`（**必须填写**）
    - **根目录**：留空
 6. 点击 **保存并部署**
@@ -188,7 +204,7 @@ git push -u origin main
 |---|---|
 | 项目名称 | `product-nav`（可自定义，会出现在域名中） |
 | 生产分支 | `main` |
-| 构建命令 | 留空（本项目是纯静态 HTML，无需构建） |
+| 构建命令 | `pnpm install`（**必须填写，不能留空**） |
 | 构建输出目录 | `public`（**必须填写 `public`**） |
 | 根目录 | 留空 |
 
