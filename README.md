@@ -74,7 +74,64 @@ bash scripts/run.sh
 
 ---
 
-## 部署到 Cloudflare Pages（手动 · 网站 GUI 方式）
+## 构建说明
+
+### 什么是「构建」？
+
+Cloudflare Pages 的构建分为两步：
+
+1. **构建命令（Build Command）** — 在服务器上执行的命令，用于生成最终可部署的文件。本项目是纯静态 HTML/CSS/JS，无需编译打包，所以构建命令留空即可。
+2. **构建输出目录（Build Output Directory）** — 告诉 Cloudflare 构建完成后，成品文件放在哪个文件夹里。本项目输出目录为 `public`，因为所有 HTML/CSS/JS 文件都直接放在 `public/` 下。
+
+> 简单理解：**构建命令 = 怎么做**，**构建输出目录 = 成品放在哪**。本项目已经是成品，所以只需告诉 Cloudflare 成品在哪（`public`），不需要执行任何构建命令。
+
+### 部署方式对比
+
+| 方式 | 适用场景 | 优点 |
+|---|---|---|
+| GitHub 自动部署 | 代码托管在 GitHub | 推送代码自动触发部署，最省心 |
+| Wrangler CLI 部署 | 本地命令行部署 | 不依赖 Git，适合快速测试 |
+| 网站手动部署 | 所有场景 | 可视化操作，适合新手 |
+
+---
+
+## 部署到 Cloudflare Pages
+
+### 方式一：通过 GitHub 自动部署（推荐）
+
+1. 将代码推送到 GitHub 仓库
+2. 在 Cloudflare Dashboard → **Workers 和 Pages** → **Pages** → 点击 **创建**
+3. 选择 **连接到 Git** → 授权 Cloudflare 访问你的 GitHub
+4. 选择你的仓库（`cloud-guidance-my`），点击 **开始设置**
+5. 构建设置：
+   - **项目名称**：`product-nav`（可自定义）
+   - **生产分支**：`main`
+   - **构建命令**：留空（本项目无需构建）
+   - **构建输出目录**：`public`（**必须填写**）
+   - **根目录**：留空
+6. 点击 **保存并部署**
+7. 部署完成后，进入 **设置 → 环境变量** 添加 `ADMIN_PASSWORD`
+8. 进入 **设置 → 函数 → KV 命名空间绑定** 绑定 `PRODUCTS_KV`
+9. 回到 **部署** 标签页，**重试部署** 让配置生效
+
+> 之后每次向 GitHub 推送代码，Cloudflare 都会自动重新部署。
+
+### 方式二：通过 Wrangler CLI 部署
+
+```bash
+# 1. 安装 Wrangler
+pnpm add -g wrangler
+
+# 2. 登录 Cloudflare
+npx wrangler login
+
+# 3. 部署
+npx wrangler pages deploy ./public --branch main
+```
+
+部署完成后，同样需要在 Cloudflare 网站中配置环境变量和 KV 绑定。
+
+### 方式三：手动 · 网站 GUI 部署（详细步骤）
 
 下面是从零开始在 Cloudflare 网站上手把手部署的完整步骤。
 
