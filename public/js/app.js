@@ -231,12 +231,70 @@ async function adminDeleteProduct(id) {
   }
 }
 
+// --- SHA-256 helpers (Web Crypto with pure-JS fallback) ---
+function rotr32(n, b) { return (n >>> b) | (n << (32 - b)); }
+
+function sha256Fallback(str) {
+  // Pure JS SHA-256 (FIPS 180-4), used when crypto.subtle is unavailable.
+  const K = [0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2];
+  const H = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+
+  const utf8 = unescape(encodeURIComponent(str));
+  const msg = [];
+  for (let i = 0; i < utf8.length; i++) msg.push(utf8.charCodeAt(i));
+
+  const bitLenHi = Math.floor((utf8.length * 8) / 0x100000000);
+  const bitLenLo = (utf8.length * 8) >>> 0;
+
+  msg.push(0x80);
+  while (msg.length % 64 !== 56) msg.push(0);
+  for (let i = 3; i >= 0; i--) msg.push((bitLenHi >>> (i * 8)) & 0xff);
+  for (let i = 7; i >= 4; i--) msg.push((bitLenLo >>> ((i - 4) * 8)) & 0xff);
+
+  const W = new Array(64);
+  for (let i = 0; i < msg.length; i += 64) {
+    for (let t = 0; t < 16; t++) {
+      W[t] = ((msg[i + t * 4] & 0xff) << 24) | ((msg[i + t * 4 + 1] & 0xff) << 16)
+        | ((msg[i + t * 4 + 2] & 0xff) << 8) | (msg[i + t * 4 + 3] & 0xff);
+    }
+    for (let t = 16; t < 64; t++) {
+      const s0 = rotr32(W[t - 15], 7) ^ rotr32(W[t - 15], 18) ^ (W[t - 15] >>> 3);
+      const s1 = rotr32(W[t - 2], 17) ^ rotr32(W[t - 2], 19) ^ (W[t - 2] >>> 10);
+      W[t] = (W[t - 16] + s0 + W[t - 7] + s1) | 0;
+    }
+    let a = H[0], b = H[1], c = H[2], d = H[3], e = H[4], f = H[5], g = H[6], h = H[7];
+    for (let t = 0; t < 64; t++) {
+      const S1 = rotr32(e, 6) ^ rotr32(e, 11) ^ rotr32(e, 25);
+      const ch = (e & f) ^ (~e & g);
+      const temp1 = (h + S1 + ch + K[t] + W[t]) | 0;
+      const S0 = rotr32(a, 2) ^ rotr32(a, 13) ^ rotr32(a, 22);
+      const maj = (a & b) ^ (a & c) ^ (b & c);
+      const temp2 = (S0 + maj) | 0;
+      h = g; g = f; f = e; e = (d + temp1) | 0;
+      d = c; c = b; b = a; a = (temp1 + temp2) | 0;
+    }
+    H[0] = (H[0] + a) | 0; H[1] = (H[1] + b) | 0; H[2] = (H[2] + c) | 0; H[3] = (H[3] + d) | 0;
+    H[4] = (H[4] + e) | 0; H[5] = (H[5] + f) | 0; H[6] = (H[6] + g) | 0; H[7] = (H[7] + h) | 0;
+  }
+  return H.map(n => (n >>> 0).toString(16).padStart(8, '0')).join('');
+}
+
 async function sha256(str) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(str);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  if (typeof crypto !== 'undefined' && crypto.subtle && typeof crypto.subtle.digest === 'function') {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(str);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  return sha256Fallback(str);
 }
 
 async function adminLogin(password) {
@@ -338,24 +396,31 @@ function renderProducts(productsToRender, containerId = 'products-grid') {
     return;
   }
 
-  grid.innerHTML = productsToRender.map((product, idx) => `
+  grid.innerHTML = productsToRender.map((product, idx) => {
+    const cover = Array.isArray(product.images) && product.images[0] ? product.images[0] : '';
+    return `
     <div class="product-card" style="animation-delay: ${idx * 0.03}s">
-      <div class="product-card-inner" onclick="window.open('${product.url || '#'}', '_blank')">
-        <div class="product-icon">${product.icon || '📦'}</div>
+      <div class="product-card-inner" onclick="window.location.href='/product.html?id=${encodeURIComponent(product.id)}'">
+        ${cover
+          ? `<div class="product-cover"><img src="${escapeHtml(cover)}" alt="${escapeHtml(product.name)}" loading="lazy" onerror="this.style.display='none'" /></div>`
+          : `<div class="product-icon">${product.icon || '📦'}</div>`}
         <h3 class="product-title">${escapeHtml(product.name)}</h3>
         <p class="product-desc">${escapeHtml(product.description || '')}</p>
         <div class="product-meta">
           ${product.category ? `<span class="product-tag">${escapeHtml(product.category)}</span>` : ''}
-          <span>${product.url ? new URL(product.url).hostname : ''}</span>
+          ${product.url ? `<span>${getDomain(product.url)}</span>` : ''}
         </div>
         ${product.url ? `
-          <span class="product-link">
+          <a class="product-link" href="${escapeHtml(product.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">
             访问官网 ${ICONS.arrowUpRight}
-          </span>
-        ` : ''}
+          </a>
+        ` : `
+          <span class="product-link">查看详情 ${ICONS.arrowUpRight}</span>
+        `}
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
 // --- Filter Products ---
@@ -381,6 +446,15 @@ function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+// --- Get domain safely ---
+function getDomain(url) {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return '';
+  }
 }
 
 // --- Init Main Page ---
@@ -424,6 +498,130 @@ async function initMainPage() {
   // Footer year
   const yearEl = document.getElementById('footer-year');
   if (yearEl) yearEl.textContent = new Date().getFullYear();
+}
+
+// --- Render Product Detail ---
+function renderProductDetail(container, product) {
+  const images = Array.isArray(product.images) ? product.images.filter(Boolean) : [];
+  const detail = product.detail || '';
+  const domain = product.url ? getDomain(product.url) : '';
+
+  const gallery = images.length > 0 ? `
+    <div class="detail-section">
+      <h2>图片预览</h2>
+      <div class="detail-thumbs">
+        ${images.map((img, i) => `
+          <img src="${escapeHtml(img)}" alt="${escapeHtml(product.name)} 图 ${i + 1}"
+            class="${i === 0 ? 'active' : ''}"
+            onclick="setDetailImage(${i})"
+            onerror="this.style.display='none'" />
+        `).join('')}
+      </div>
+    </div>
+  ` : '';
+
+  container.innerHTML = `
+    <div class="detail-card glass">
+      <div class="detail-hero">
+        ${images.length
+          ? `<img class="detail-cover" id="detail-cover" src="${escapeHtml(images[0])}" alt="${escapeHtml(product.name)}" onerror="this.parentElement.classList.add('placeholder')" />`
+          : `<div class="detail-cover detail-cover-placeholder">${product.icon || '📦'}</div>`}
+      </div>
+      <div class="detail-body">
+        <div class="detail-title-row">
+          <div class="detail-icon">${product.icon || '📦'}</div>
+          <div>
+            <h1>${escapeHtml(product.name)}</h1>
+            <div class="detail-meta">
+              ${product.category ? `<span class="product-tag">${escapeHtml(product.category)}</span>` : ''}
+              ${domain ? `<span class="detail-domain">${escapeHtml(domain)}</span>` : ''}
+            </div>
+          </div>
+        </div>
+
+        ${product.description ? `<p class="detail-desc">${escapeHtml(product.description)}</p>` : ''}
+
+        ${detail ? `
+          <div class="detail-section">
+            <h2>详细介绍</h2>
+            <div class="detail-text">${escapeHtml(detail)}</div>
+          </div>
+        ` : ''}
+
+        ${gallery}
+
+        <div class="detail-actions">
+          ${product.url ? `
+            <a class="glass-btn glass-btn-primary" href="${escapeHtml(product.url)}" target="_blank" rel="noopener">
+              访问官网 ${ICONS.arrowUpRight}
+            </a>
+          ` : ''}
+          <a class="glass-btn" href="/">返回首页</a>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// --- Switch Detail Gallery Image ---
+function setDetailImage(idx) {
+  const main = document.getElementById('detail-cover');
+  const imgs = document.querySelectorAll('.detail-thumbs img');
+  if (!imgs[idx]) return;
+  imgs.forEach((img, i) => img.classList.toggle('active', i === idx));
+  if (main) {
+    main.src = imgs[idx].src;
+    const hero = document.querySelector('.detail-hero');
+    if (hero) hero.classList.remove('placeholder');
+  }
+}
+
+// --- Init Product Detail Page ---
+async function initProductPage() {
+  const container = document.getElementById('product-detail');
+  if (!container) return;
+
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get('id');
+
+  try {
+    await fetchProducts();
+    await fetchCustomCode();
+  } catch (e) {
+    console.warn('Init error:', e);
+  }
+
+  applyBgSettings();
+  applyCustomCode();
+
+  const yearEl = document.getElementById('footer-year');
+  if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+  if (!id) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📦</div>
+        <h3>未找到产品</h3>
+        <p>缺少产品 ID 参数</p>
+      </div>
+    `;
+    return;
+  }
+
+  const product = products.find(p => p.id === id);
+  if (!product) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📦</div>
+        <h3>产品不存在或已删除</h3>
+        <p><a href="/" style="color:var(--accent-text);text-decoration:none">返回首页</a></p>
+      </div>
+    `;
+    return;
+  }
+
+  document.title = `${product.name} — Product Nav`;
+  renderProductDetail(container, product);
 }
 
 // --- Init Admin Login ---
@@ -550,6 +748,15 @@ function showAddProductModal() {
         <textarea class="glass-input glass-textarea" id="product-desc" placeholder="简短描述产品" rows="2"></textarea>
       </div>
       <div class="form-group">
+        <label>详细介绍</label>
+        <textarea class="glass-input glass-textarea" id="product-detail" placeholder="产品的详细介绍，支持多行文本" rows="4"></textarea>
+      </div>
+      <div class="form-group">
+        <label>图片 URL（每行一个）</label>
+        <textarea class="glass-input glass-textarea" id="product-images" placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg" rows="3"></textarea>
+        <p style="font-size:0.75rem;color:var(--text-tertiary);margin-top:0.25rem">第一张图片将显示在导航卡片和详情页顶部</p>
+      </div>
+      <div class="form-group">
         <label>分类</label>
         <input class="glass-input" id="product-category" placeholder="如：AI工具、设计资源、开发工具" />
       </div>
@@ -580,6 +787,8 @@ async function confirmAddProduct() {
   const product = {
     name,
     description: document.getElementById('product-desc').value.trim(),
+    detail: document.getElementById('product-detail').value.trim(),
+    images: (document.getElementById('product-images').value || '').split('\n').map(s => s.trim()).filter(Boolean),
     category: document.getElementById('product-category').value.trim(),
     url: document.getElementById('product-url').value.trim(),
     icon: document.getElementById('product-icon').value.trim() || '📦',
@@ -616,6 +825,15 @@ function showEditProductModal(id) {
         <textarea class="glass-input glass-textarea" id="edit-product-desc" rows="2">${escapeHtml(product.description || '')}</textarea>
       </div>
       <div class="form-group">
+        <label>详细介绍</label>
+        <textarea class="glass-input glass-textarea" id="edit-product-detail" rows="4">${escapeHtml(product.detail || '')}</textarea>
+      </div>
+      <div class="form-group">
+        <label>图片 URL（每行一个）</label>
+        <textarea class="glass-input glass-textarea" id="edit-product-images" rows="3">${escapeHtml((product.images || []).join('\n'))}</textarea>
+        <p style="font-size:0.75rem;color:var(--text-tertiary);margin-top:0.25rem">第一张图片将显示在导航卡片和详情页顶部</p>
+      </div>
+      <div class="form-group">
         <label>分类</label>
         <input class="glass-input" id="edit-product-category" value="${escapeHtml(product.category || '')}" />
       </div>
@@ -646,6 +864,8 @@ async function confirmEditProduct(id) {
   const updates = {
     name,
     description: document.getElementById('edit-product-desc').value.trim(),
+    detail: document.getElementById('edit-product-detail').value.trim(),
+    images: (document.getElementById('edit-product-images').value || '').split('\n').map(s => s.trim()).filter(Boolean),
     category: document.getElementById('edit-product-category').value.trim(),
     url: document.getElementById('edit-product-url').value.trim(),
     icon: document.getElementById('edit-product-icon').value.trim() || '📦',
@@ -769,6 +989,9 @@ function updateBgPreview(url) {
 document.addEventListener('DOMContentLoaded', () => {
   if (document.getElementById('products-grid')) {
     initMainPage();
+  }
+  if (document.getElementById('product-detail')) {
+    initProductPage();
   }
   if (document.getElementById('login-form')) {
     initAdminLogin();

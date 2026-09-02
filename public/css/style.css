@@ -1153,3 +1153,399 @@ body.no-glass .modal {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+
+/* ============================================================
+   iOS 26 Liquid Glass — Crystal Glassmorphism
+   水晶玻璃质感：色彩环境光 + 高饱和磨砂 + 渐变水晶描边 + 高光
+   ============================================================ */
+
+/* --- Liquid Glass Tokens (override) --- */
+:root {
+  --glass-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.36));
+  --glass-bg-hover: linear-gradient(145deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.50));
+  --glass-bg-active: linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.62));
+  --glass-border: rgba(255, 255, 255, 0.55);
+  --glass-border-hover: rgba(255, 255, 255, 0.85);
+  --glass-shadow: 0 1px 1px rgba(0, 0, 0, 0.03), 0 8px 28px rgba(31, 45, 61, 0.08);
+  --glass-shadow-hover: 0 1px 1px rgba(0, 0, 0, 0.04), 0 18px 48px rgba(31, 45, 61, 0.13);
+  --glass-blur: blur(32px) saturate(185%);
+  --glass-bg-dark: linear-gradient(145deg, rgba(255, 255, 255, 0.20), rgba(255, 255, 255, 0.08));
+  --glass-bg-dark-hover: linear-gradient(145deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.12));
+  --glass-shadow-dark: 0 1px 1px rgba(255, 255, 255, 0.06), 0 8px 28px rgba(0, 0, 0, 0.28);
+  --glass-shadow-dark-hover: 0 1px 1px rgba(255, 255, 255, 0.08), 0 18px 48px rgba(0, 0, 0, 0.36);
+}
+
+/* --- Ambient crystal backdrop (彩色环境光，供磨砂玻璃折射) --- */
+body::before {
+  content: '';
+  position: fixed;
+  inset: -5%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(640px 640px at 10% 6%, rgba(99, 102, 241, 0.20), transparent 62%),
+    radial-gradient(760px 760px at 90% 10%, rgba(34, 211, 238, 0.18), transparent 62%),
+    radial-gradient(840px 840px at 72% 92%, rgba(244, 114, 182, 0.16), transparent 62%),
+    radial-gradient(640px 640px at 18% 90%, rgba(129, 140, 248, 0.14), transparent 62%);
+  filter: saturate(1.1);
+  animation: ambientDrift 36s ease-in-out infinite alternate;
+}
+
+@keyframes ambientDrift {
+  from { transform: scale(1) translate3d(0, 0, 0); }
+  to   { transform: scale(1.06) translate3d(1%, -1%, 0); }
+}
+
+body.has-bg-image::before { opacity: 0; }
+body.no-glass::before { opacity: 0.1; }
+
+/* --- Core glass surfaces: 渐变底 + 高饱和磨砂 + 内高光 --- */
+.glass,
+.glass-card,
+.product-card-inner,
+.login-card,
+.modal,
+.search-bar {
+  position: relative;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 0.5px solid rgba(255, 255, 255, 0.55);
+  box-shadow: var(--glass-shadow),
+              inset 0 1px 1px rgba(255, 255, 255, 0.65),
+              inset 0 -1px 1px rgba(255, 255, 255, 0.10);
+}
+
+.glass:hover,
+.glass-card:hover,
+.product-card-inner:hover {
+  background: var(--glass-bg-hover);
+  border-color: rgba(255, 255, 255, 0.85);
+  box-shadow: var(--glass-shadow-hover),
+              inset 0 1px 1px rgba(255, 255, 255, 0.75),
+              inset 0 -1px 1px rgba(255, 255, 255, 0.12);
+}
+
+.login-card,
+.modal {
+  box-shadow: 0 24px 80px rgba(31, 45, 61, 0.16), inset 0 1px 1px rgba(255, 255, 255, 0.7);
+}
+
+/* --- 水晶渐变描边（晶石边缘反光） --- */
+.glass::before,
+.glass-card::before,
+.product-card-inner::before,
+.login-card::before,
+.modal::before,
+.search-bar::before,
+.detail-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.10) 42%, rgba(255, 255, 255, 0.60));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* --- 顶部高光（光线在玻璃上折射的镜面反射） --- */
+.glass::after,
+.glass-card::after,
+.product-card-inner::after,
+.login-card::after,
+.modal::after,
+.detail-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 6%;
+  right: 6%;
+  height: 42%;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0));
+  filter: blur(8px);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* --- Header / Sidebar / Toast --- */
+.header {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.58));
+  backdrop-filter: blur(40px) saturate(190%);
+  -webkit-backdrop-filter: blur(40px) saturate(190%);
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.75);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.5), 0 1px 0 rgba(0, 0, 0, 0.04);
+}
+
+.admin-sidebar {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.80), rgba(255, 255, 255, 0.55));
+  backdrop-filter: blur(40px) saturate(190%);
+  -webkit-backdrop-filter: blur(40px) saturate(190%);
+}
+
+.toast {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.70));
+  backdrop-filter: blur(40px) saturate(200%);
+  -webkit-backdrop-filter: blur(40px) saturate(200%);
+  box-shadow: 0 8px 28px rgba(31, 45, 61, 0.18), inset 0 1px 1px rgba(255, 255, 255, 0.8);
+}
+
+/* --- Buttons / Inputs / Tabs --- */
+.glass-btn {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.38));
+  backdrop-filter: blur(24px) saturate(175%);
+  -webkit-backdrop-filter: blur(24px) saturate(175%);
+  border: 0.5px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.7);
+}
+
+.glass-btn:hover {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.52));
+  border-color: rgba(255, 255, 255, 0.85);
+}
+
+.glass-btn-primary {
+  background: linear-gradient(180deg, #0a84ff, var(--accent-active));
+  border: none;
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(0, 113, 227, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.35);
+}
+
+.glass-btn-primary:hover {
+  background: linear-gradient(180deg, #2f97ff, var(--accent));
+  box-shadow: 0 4px 16px rgba(0, 113, 227, 0.42), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+}
+
+.glass-input {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.45));
+  backdrop-filter: blur(20px) saturate(170%);
+  -webkit-backdrop-filter: blur(20px) saturate(170%);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6);
+}
+
+.category-tab {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.70), rgba(255, 255, 255, 0.34));
+  backdrop-filter: blur(20px) saturate(170%);
+  -webkit-backdrop-filter: blur(20px) saturate(170%);
+  border: 0.5px solid rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6);
+}
+
+.category-tab.active {
+  background: linear-gradient(180deg, #0a84ff, var(--accent-active));
+  border-color: transparent;
+  box-shadow: 0 2px 10px rgba(0, 113, 227, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.35);
+}
+
+/* --- Card 封面图（有图片时） --- */
+.product-cover {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: 0.875rem;
+  height: 128px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(34, 211, 238, 0.10));
+}
+
+.product-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s ease;
+}
+
+.product-card-inner:hover .product-cover img {
+  transform: scale(1.04);
+}
+
+/* --- 产品详情页 --- */
+.product-detail-page {
+  position: relative;
+  z-index: 1;
+  padding: 2.5rem 0 4rem;
+}
+
+.detail-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 0.5px solid rgba(255, 255, 255, 0.55);
+  box-shadow: var(--glass-shadow), inset 0 1px 1px rgba(255, 255, 255, 0.65);
+  animation: detailIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes detailIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.detail-hero {
+  position: relative;
+  height: 320px;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.20), rgba(34, 211, 238, 0.14), rgba(244, 114, 182, 0.10));
+}
+
+.detail-hero.placeholder {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.20), rgba(34, 211, 238, 0.14));
+}
+
+.detail-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.detail-cover-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 5rem;
+  color: rgba(0, 113, 227, 0.45);
+}
+
+.detail-body {
+  padding: 2rem 2.5rem 2.5rem;
+}
+
+.detail-title-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.detail-icon {
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+  background: rgba(0, 113, 227, 0.06);
+  border: 0.5px solid rgba(0, 113, 227, 0.12);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.7);
+}
+
+.detail-title-row h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.detail-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.detail-domain {
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+}
+
+.detail-desc {
+  font-size: 1.0625rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 1.75rem;
+}
+
+.detail-section {
+  margin-bottom: 1.75rem;
+}
+
+.detail-section h2 {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+  margin-bottom: 0.75rem;
+}
+
+.detail-text {
+  white-space: pre-wrap;
+  font-size: 0.9375rem;
+  line-height: 1.75;
+  color: var(--text-primary);
+}
+
+.detail-thumbs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.detail-thumbs img {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all var(--transition-fast);
+}
+
+.detail-thumbs img:hover {
+  transform: scale(1.02);
+  box-shadow: var(--glass-shadow-hover);
+}
+
+.detail-thumbs img.active {
+  border-color: var(--accent);
+}
+
+.detail-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 2rem;
+}
+
+.detail-actions .glass-btn {
+  padding: 0.75rem 1.5rem;
+  font-size: 0.9375rem;
+}
+
+/* --- no-glass 状态下的补充覆盖 --- */
+body.no-glass .glass::before, body.no-glass .glass::after,
+body.no-glass .glass-card::before, body.no-glass .glass-card::after,
+body.no-glass .product-card-inner::before, body.no-glass .product-card-inner::after,
+body.no-glass .login-card::before, body.no-glass .login-card::after,
+body.no-glass .modal::before, body.no-glass .modal::after,
+body.no-glass .search-bar::before, body.no-glass .search-bar::after,
+body.no-glass .detail-card::before, body.no-glass .detail-card::after {
+  display: none;
+}
+
+body.no-glass .detail-card {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: var(--bg-card) !important;
+}
+
+/* --- 移动端适配 --- */
+@media (max-width: 768px) {
+  .detail-hero {
+    height: 220px;
+  }
+
+  .detail-body {
+    padding: 1.5rem;
+  }
+}
