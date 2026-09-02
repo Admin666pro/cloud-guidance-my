@@ -1,17 +1,24 @@
 /**
  * POST /api/auth
  * Verify admin password against Cloudflare secret variable.
- * Returns a JWT-like token (simple signed token) on success.
+ * Both the incoming password and the env variable are SHA-256 hashed before comparison.
+ * Returns a JWT-like token on success.
  */
 
-// Simple token signing (for static site purposes)
-// In production, use a proper JWT library
+async function sha256(str) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(str);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 function createToken(secret) {
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
   const payload = btoa(JSON.stringify({
     sub: 'admin',
     iat: Math.floor(Date.now() / 1000),
-    exp: Math.floor(Date.now() / 1000) + 86400, // 24 hours
+    exp: Math.floor(Date.now() / 1000) + 86400,
   }));
   const signature = btoa(header + '.' + payload + '.' + secret);
   return header + '.' + payload + '.' + signature;
@@ -20,14 +27,12 @@ function createToken(secret) {
 export async function onRequest(context) {
   const { request, env } = context;
 
-  // CORS headers
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   };
 
-  // Handle preflight
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
@@ -41,18 +46,24 @@ export async function onRequest(context) {
 
   try {
     const { password } = await request.json();
+    if (!password) {
+      return new Response(JSON.stringify({ error: '密码不能为空' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
-    // Get admin password from environment variable (Cloudflare secret)
+    // Hash the environment variable password, then compare
     const adminPassword = env.ADMIN_PASSWORD || 'admin123';
+    const adminPasswordHash = await sha256(adminPassword);
 
-    if (!password || password !== adminPassword) {
+    if (password !== adminPasswordHash) {
       return new Response(JSON.stringify({ error: '密码错误' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Create a simple token
     const token = createToken(env.ADMIN_PASSWORD || 'admin123');
 
     return new Response(JSON.stringify({ token, success: true }), {

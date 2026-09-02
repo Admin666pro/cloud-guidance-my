@@ -231,23 +231,34 @@ async function adminDeleteProduct(id) {
   }
 }
 
+async function sha256(str) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(str);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 async function adminLogin(password) {
+  // Hash the password first before sending
+  const passwordHash = await sha256(password);
+
   // Try Cloudflare API first
   try {
     const data = await apiRequest('/auth', {
       method: 'POST',
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ password: passwordHash }),
     });
     return data;
   } catch (err) {
-    // Local fallback: check against localStorage password
+    // Local fallback: hash the localStorage password too, then compare
     const localPassword = localStorage.getItem('admin_password') || 'admin123';
-    if (password === localPassword) {
-      // Create a simple local token
+    const localPasswordHash = await sha256(localPassword);
+    if (passwordHash === localPasswordHash) {
       const token = btoa(JSON.stringify({ sub: 'admin', ts: Date.now() }));
       return { token, success: true };
     }
-    throw err; // Re-throw if password doesn't match locally either
+    throw err;
   }
 }
 
