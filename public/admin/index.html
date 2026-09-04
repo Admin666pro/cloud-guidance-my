@@ -48,6 +48,13 @@
           </svg>
           背景设置
         </button>
+        <button class="nav-item" data-page="config">
+          <svg class="icon-svg" viewBox="0 0 24 24" width="18" height="18">
+            <path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/>
+            <circle cx="18" cy="4" r="2"/><circle cx="12" cy="10" r="2"/><circle cx="6" cy="16" r="2"/>
+          </svg>
+          站点设置
+        </button>
         <button class="nav-item" data-page="settings">
           <svg class="icon-svg" viewBox="0 0 24 24" width="18" height="18">
             <circle cx="12" cy="12" r="3"/>
@@ -196,6 +203,128 @@
               <input type="checkbox" id="toggle-glass" checked />
               <span class="toggle-track"></span>
             </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Site Config Page -->
+      <div class="admin-page" id="page-config">
+        <div class="page-header">
+          <h1>站点设置</h1>
+          <button class="glass-btn glass-btn-primary" id="btn-save-config">
+            <svg class="icon-svg" viewBox="0 0 24 24" width="16" height="16">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+            保存全部设置
+          </button>
+        </div>
+
+        <!-- 站点信息 -->
+        <div class="glass" style="padding:1.5rem;margin-bottom:1.5rem">
+          <h3 style="margin-bottom:1rem;font-size:1.125rem;font-weight:600">站点信息</h3>
+          <div class="config-grid">
+            <div class="form-group">
+              <label>站点名称</label>
+              <input class="glass-input" id="cfg-site-name" placeholder="Product Nav" />
+              <p class="cfg-hint">显示在浏览器标签页标题中</p>
+            </div>
+            <div class="form-group">
+              <label>Logo 文字</label>
+              <input class="glass-input" id="cfg-logo-text" placeholder="Product Nav" />
+            </div>
+            <div class="form-group">
+              <label>Logo 图标（Emoji / 符号）</label>
+              <input class="glass-input" id="cfg-logo-emoji" placeholder="◆" maxlength="2" style="max-width:120px" />
+            </div>
+            <div class="form-group">
+              <label>徽章文案</label>
+              <input class="glass-input" id="cfg-hero-badge" placeholder="精选产品导航" />
+            </div>
+            <div class="form-group">
+              <label>主标题</label>
+              <input class="glass-input" id="cfg-hero-title" placeholder="发现优秀的产品" />
+            </div>
+            <div class="form-group">
+              <label>副标题</label>
+              <input class="glass-input" id="cfg-hero-subtitle" placeholder="精心收录各类优质产品与工具，帮你快速找到所需" />
+            </div>
+            <div class="form-group">
+              <label>页脚版权文案</label>
+              <input class="glass-input" id="cfg-footer-text" placeholder="Product Nav. All rights reserved." />
+            </div>
+            <div class="form-group">
+              <label>统计代码</label>
+              <textarea class="glass-input glass-textarea" id="cfg-analytics" rows="3" placeholder="粘贴百度统计 / Google Analytics 等代码片段，留空则不注入"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- 主题定制 -->
+        <div class="glass" style="padding:1.5rem;margin-bottom:1.5rem">
+          <h3 style="margin-bottom:1rem;font-size:1.125rem;font-weight:600">主题定制</h3>
+          <div class="config-grid">
+            <div class="form-group">
+              <label>强调色</label>
+              <div style="display:flex;align-items:center;gap:0.75rem">
+                <input type="color" id="cfg-accent-color" value="#0071e3" style="width:44px;height:36px;padding:0;border:none;background:transparent;cursor:pointer" />
+                <span id="cfg-accent-text" style="font-size:0.875rem;color:var(--text-secondary)">#0071e3</span>
+              </div>
+              <p class="cfg-hint">用于按钮、选中态、链接等强调元素</p>
+            </div>
+            <div class="form-group">
+              <label>首页网格列数（桌面端）</label>
+              <select class="glass-input" id="cfg-grid-columns">
+                <option value="2">2 列</option>
+                <option value="3">3 列</option>
+                <option value="4">4 列</option>
+              </select>
+            </div>
+          </div>
+          <div class="glass" style="padding:0.5rem 1.25rem;margin-top:1rem">
+            <div class="setting-row">
+              <div class="setting-info">
+                <h4>显示产品描述</h4>
+                <p>关闭后首页卡片只显示产品名称与分类</p>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="cfg-show-desc" checked />
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+            <div class="setting-row">
+              <div class="setting-info">
+                <h4>页面动画</h4>
+                <p>关闭后禁用卡片入场与过渡动画</p>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="cfg-animations" checked />
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- 分类管理 -->
+        <div class="glass" style="padding:1.5rem;margin-bottom:1.5rem">
+          <h3 style="margin-bottom:1rem;font-size:1.125rem;font-weight:600">分类管理</h3>
+          <p class="cfg-hint" style="margin-bottom:1rem">分类将显示在首页筛选栏，产品可选择归属分类。</p>
+          <div id="category-list" style="margin-bottom:1rem"></div>
+          <div style="display:flex;gap:0.5rem">
+            <input class="glass-input" id="new-category-name" placeholder="输入新分类名称" style="flex:1" />
+            <button class="glass-btn glass-btn-primary" id="btn-add-category">添加分类</button>
+          </div>
+        </div>
+
+        <!-- 数据备份 -->
+        <div class="glass" style="padding:1.5rem">
+          <h3 style="margin-bottom:0.5rem;font-size:1.125rem;font-weight:600">数据备份与恢复</h3>
+          <p class="cfg-hint" style="margin-bottom:1rem">导出全部数据（产品、设置、分类、自定义代码、背景）为 JSON 文件，可随时导入恢复。</p>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+            <button class="glass-btn glass-btn-primary" id="btn-export">导出数据</button>
+            <button class="glass-btn" id="btn-import">导入数据</button>
+            <input type="file" id="import-file" accept="application/json,.json" style="display:none" />
           </div>
         </div>
       </div>
