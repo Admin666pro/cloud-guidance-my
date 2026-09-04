@@ -30,6 +30,7 @@ let bgImageUrl = '';
 let glassEnabled = true;
 let siteConfig = null;
 let categories = [];
+let preheatClicks = 0;
 
 // --- Default Site Config ---
 const DEFAULT_SITE_CONFIG = {
@@ -492,6 +493,43 @@ function applyAnalytics() {
   document.body.appendChild(div);
 }
 
+// --- Preheat 标签点击计数 ---
+function updatePreheatCount() {
+  const el = document.getElementById('preheat-count');
+  if (el) el.textContent = `★ ${preheatClicks}`;
+}
+
+async function fetchPreheatStats() {
+  try {
+    const data = await apiRequest('/stats');
+    preheatClicks = data.preheatClicks || 0;
+  } catch {
+    try {
+      preheatClicks = parseInt(localStorage.getItem('preheat_clicks') || '0', 10) || 0;
+    } catch {
+      preheatClicks = 0;
+    }
+  }
+  updatePreheatCount();
+}
+
+async function incrementPreheat() {
+  // 乐观更新，即时反馈
+  preheatClicks += 1;
+  updatePreheatCount();
+  try {
+    localStorage.setItem('preheat_clicks', String(preheatClicks));
+  } catch (e) { /* ignore */ }
+
+  try {
+    const data = await apiRequest('/stats', { method: 'POST' });
+    preheatClicks = data.preheatClicks || preheatClicks;
+    updatePreheatCount();
+  } catch {
+    // 后端不可用时保留本地计数
+  }
+}
+
 // --- Render Category Tabs (from config) ---
 function renderCategoryTabs() {
   const container = document.getElementById('category-tabs');
@@ -622,6 +660,13 @@ async function initMainPage() {
 
   // Render products
   renderProducts(products);
+
+  // Preheat 标签：加载计数 + 点击 +1
+  fetchPreheatStats();
+  const preheatBadge = document.getElementById('preheat-badge');
+  if (preheatBadge) {
+    preheatBadge.addEventListener('click', () => incrementPreheat());
+  }
 
   // Search
   const searchInput = document.getElementById('search-input');
