@@ -124,8 +124,10 @@ async function apiRequest(endpoint, options = {}) {
 
   const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Request failed' }));
-    throw new Error(err.error || `HTTP ${res.status}`);
+    const body = await res.json().catch(() => ({ error: 'Request failed' }));
+    const err = new Error(body.error || `HTTP ${res.status}`);
+    err.status = res.status;
+    throw err;
   }
   return res.json();
 }
@@ -309,12 +311,16 @@ async function adminLogin(password) {
     });
     return data;
   } catch (err) {
-    // Local fallback: hash the localStorage password too, then compare
-    const localPassword = localStorage.getItem('admin_password') || 'admin123';
-    const localPasswordHash = await sha256(localPassword);
-    if (passwordHash === localPasswordHash) {
-      const token = btoa(JSON.stringify({ sub: 'admin', ts: Date.now() }));
-      return { token, success: true };
+    // 仅在后端不可达（网络错误，无 status）时启用本地降级；
+    // 服务器明确拒绝（401/429 等）时不降级，避免绕过服务端的校验与限流
+    if (!err.status) {
+      const localPassword = localStorage.getItem('admin_password') || 'admin123';
+      const localPasswordHash = await sha256(localPassword);
+      if (passwordHash === localPasswordHash) {
+        const now = Math.floor(Date.now() / 1000);
+        const token = btoa(JSON.stringify({ sub: 'admin', ts: now, exp: now + 86400 }));
+        return { token, success: true };
+      }
     }
     throw err;
   }

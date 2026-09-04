@@ -8,16 +8,12 @@
  * DELETE /api/products?id=xxx   — Delete a product (auth required)
  */
 
+import { verifyToken } from './_lib/auth.js';
+
 const AUTH_HEADER = 'Authorization';
 
-function verifyToken(authHeader, env) {
-  if (!authHeader || !authHeader.startsWith('Bearer ')) return false;
-  const secret = env.ADMIN_PASSWORD || 'admin123';
-  const token = authHeader.slice(7);
-  const parts = token.split('.');
-  if (parts.length !== 3) return false;
-  const expectedSig = btoa(parts[0] + '.' + parts[1] + '.' + secret);
-  return parts[2] === expectedSig;
+function getSecret(env) {
+  return env.ADMIN_PASSWORD || 'admin123';
 }
 
 const corsHeaders = {
@@ -67,7 +63,7 @@ export async function onRequest(context) {
     }
 
     // POST, PUT, DELETE — require auth
-    if (!verifyToken(request.headers.get(AUTH_HEADER), env)) {
+    if (!(await verifyToken(request.headers.get(AUTH_HEADER), getSecret(env)))) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
