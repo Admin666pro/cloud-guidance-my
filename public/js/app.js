@@ -28,6 +28,25 @@ let customJS = '';
 let customHTML = '';
 let bgImageUrl = '';
 let glassEnabled = true;
+let siteConfig = null;
+let categories = [];
+let preheatClicks = 0;
+
+// --- Default Site Config ---
+const DEFAULT_SITE_CONFIG = {
+  site_name: 'Product Nav',
+  logo_text: 'Product Nav',
+  logo_emoji: '◆',
+  hero_badge: '精选产品导航',
+  hero_title: '发现优秀的产品',
+  hero_subtitle: '精心收录各类优质产品与工具，帮你快速找到所需',
+  footer_text: 'Product Nav. All rights reserved.',
+  analytics: '',
+  accent_color: '#0071e3',
+  grid_columns: 4,
+  show_description: true,
+  animations_enabled: true,
+};
 
 // --- API Config ---
 const API_BASE = '/api';
@@ -386,6 +405,160 @@ function applyCustomCode() {
   }
 }
 
+// --- Site Config API ---
+async function fetchConfig() {
+  try {
+    const data = await apiRequest('/config');
+    siteConfig = { ...DEFAULT_SITE_CONFIG, ...(data.config || {}) };
+    categories = Array.isArray(data.categories) ? data.categories : [];
+  } catch {
+    try {
+      const saved = JSON.parse(localStorage.getItem('site_config') || '{}');
+      siteConfig = { ...DEFAULT_SITE_CONFIG, ...saved };
+    } catch {
+      siteConfig = { ...DEFAULT_SITE_CONFIG };
+    }
+    try {
+      categories = JSON.parse(localStorage.getItem('categories') || '[]');
+    } catch {
+      categories = [];
+    }
+  }
+  return siteConfig;
+}
+
+async function saveConfig() {
+  try {
+    await apiRequest('/config', {
+      method: 'POST',
+      body: JSON.stringify({ config: siteConfig, categories }),
+    });
+  } catch {
+    localStorage.setItem('site_config', JSON.stringify(siteConfig));
+    localStorage.setItem('categories', JSON.stringify(categories));
+  }
+}
+
+// --- Apply Site Config (brand + theme) ---
+function applySiteConfig() {
+  if (!siteConfig) siteConfig = { ...DEFAULT_SITE_CONFIG };
+
+  const setText = (id, value) => {
+    const el = document.getElementById(id);
+    if (el && value) el.textContent = value;
+  };
+
+  // 站点信息
+  setText('logo-icon', siteConfig.logo_emoji);
+  setText('logo-text', siteConfig.logo_text || siteConfig.site_name);
+  setText('hero-badge-text', siteConfig.hero_badge);
+  setText('hero-title', siteConfig.hero_title);
+  setText('hero-subtitle', siteConfig.hero_subtitle);
+  setText('footer-text', siteConfig.footer_text);
+
+  // 页面标题
+  if (!document.getElementById('product-detail')) {
+    document.title = `${siteConfig.site_name || 'Product Nav'} — 产品导航`;
+  }
+
+  // 主题：强调色
+  if (siteConfig.accent_color) {
+    const root = document.documentElement;
+    root.style.setProperty('--accent', siteConfig.accent_color);
+    root.style.setProperty('--accent-hover', siteConfig.accent_color);
+    root.style.setProperty('--accent-active', siteConfig.accent_color);
+    root.style.setProperty('--accent-text', siteConfig.accent_color);
+  }
+
+  // 主题：网格列数（保持移动端响应式）
+  const grid = document.getElementById('products-grid');
+  if (grid && siteConfig.grid_columns) {
+    grid.dataset.cols = String(siteConfig.grid_columns);
+  }
+
+  // 主题：描述显示 / 动画
+  document.body.classList.toggle('hide-product-desc', siteConfig.show_description === false);
+  document.body.classList.toggle('no-animations', siteConfig.animations_enabled === false);
+
+  // 统计代码
+  applyAnalytics();
+}
+
+function applyAnalytics() {
+  if (!siteConfig || !siteConfig.analytics) return;
+  if (document.getElementById('site-analytics')) return;
+  const div = document.createElement('div');
+  div.id = 'site-analytics';
+  div.innerHTML = siteConfig.analytics;
+  document.body.appendChild(div);
+}
+
+// --- Preheat 标签点击计数 ---
+function updatePreheatCount() {
+  const el = document.getElementById('preheat-count');
+  if (el) el.textContent = `★ ${preheatClicks}`;
+}
+
+async function fetchPreheatStats() {
+  try {
+    const data = await apiRequest('/stats');
+    preheatClicks = data.preheatClicks || 0;
+  } catch {
+    try {
+      preheatClicks = parseInt(localStorage.getItem('preheat_clicks') || '0', 10) || 0;
+    } catch {
+      preheatClicks = 0;
+    }
+  }
+  updatePreheatCount();
+}
+
+async function incrementPreheat() {
+  // 乐观更新，即时反馈
+  preheatClicks += 1;
+  updatePreheatCount();
+  try {
+    localStorage.setItem('preheat_clicks', String(preheatClicks));
+  } catch (e) { /* ignore */ }
+
+  try {
+    const data = await apiRequest('/stats', { method: 'POST' });
+    preheatClicks = data.preheatClicks || preheatClicks;
+    updatePreheatCount();
+  } catch {
+    // 后端不可用时保留本地计数
+  }
+}
+
+// --- Render Category Tabs (from config) ---
+function renderCategoryTabs() {
+  const container = document.getElementById('category-tabs');
+  if (!container) return;
+
+  const tabs = [{ name: '全部', key: 'all' }];
+  (categories || []).forEach(c => {
+    if (c && !tabs.some(t => t.key === c)) tabs.push({ name: c, key: c });
+  });
+
+  container.innerHTML = `
+    <div class="container" style="display:flex;gap:0.5rem;flex-wrap:wrap;justify-content:center;padding:0 1.5rem">
+      ${tabs.map((t, i) => `
+        <button class="category-tab${i === 0 ? ' active' : ''}" data-category="${escapeHtml(t.key)}">${escapeHtml(t.name)}</button>
+      `).join('')}
+    </div>
+  `;
+
+  container.querySelectorAll('.category-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      container.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const searchInput = document.getElementById('search-input');
+      const query = searchInput ? searchInput.value : '';
+      renderProducts(filterProducts(query, tab.dataset.category));
+    });
+  });
+}
+
 // --- Render Products ---
 function renderProducts(productsToRender, containerId = 'products-grid') {
   const grid = document.getElementById(containerId);
@@ -468,6 +641,7 @@ async function initMainPage() {
   try {
     await fetchProducts();
     await fetchCustomCode();
+    await fetchConfig();
   } catch (e) {
     console.warn('Init error:', e);
   }
@@ -475,31 +649,34 @@ async function initMainPage() {
   // Apply background settings
   applyBgSettings();
 
+  // Apply site config (brand + theme)
+  applySiteConfig();
+
   // Apply custom code
   applyCustomCode();
 
+  // Render category tabs
+  renderCategoryTabs();
+
   // Render products
   renderProducts(products);
+
+  // Preheat 标签：加载计数 + 点击 +1
+  fetchPreheatStats();
+  const preheatBadge = document.getElementById('preheat-badge');
+  if (preheatBadge) {
+    preheatBadge.addEventListener('click', () => incrementPreheat());
+  }
 
   // Search
   const searchInput = document.getElementById('search-input');
   if (searchInput) {
     searchInput.addEventListener('input', () => {
-      const activeTab = document.querySelector('.category-tab.active');
+      const activeTab = document.querySelector('#category-tabs .category-tab.active');
       const category = activeTab ? activeTab.dataset.category : 'all';
       renderProducts(filterProducts(searchInput.value, category));
     });
   }
-
-  // Category tabs
-  document.querySelectorAll('.category-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      const query = searchInput ? searchInput.value : '';
-      renderProducts(filterProducts(query, tab.dataset.category));
-    });
-  });
 
   // Footer year
   const yearEl = document.getElementById('footer-year');
@@ -593,11 +770,13 @@ async function initProductPage() {
   try {
     await fetchProducts();
     await fetchCustomCode();
+    await fetchConfig();
   } catch (e) {
     console.warn('Init error:', e);
   }
 
   applyBgSettings();
+  applySiteConfig();
   applyCustomCode();
 
   const yearEl = document.getElementById('footer-year');
@@ -626,7 +805,8 @@ async function initProductPage() {
     return;
   }
 
-  document.title = `${product.name} — Product Nav`;
+  const siteName = siteConfig && siteConfig.site_name ? siteConfig.site_name : 'Product Nav';
+  document.title = `${product.name} — ${siteName}`;
   renderProductDetail(container, product);
 }
 
@@ -699,6 +879,9 @@ async function initAdminDashboard() {
 
   // Init background settings
   initBgSettings();
+
+  // Init site config page
+  initConfigPage();
 }
 
 // --- Render Admin Products ---
@@ -737,6 +920,12 @@ function renderAdminProducts() {
   `).join('');
 }
 
+// --- 分类下拉候选（用于产品表单） ---
+function categoryDatalist() {
+  const opts = (categories || []).map(c => `<option value="${escapeHtml(c)}"></option>`).join('');
+  return opts ? `<datalist id="category-options">${opts}</datalist>` : '';
+}
+
 // --- Show Add Product Modal ---
 function showAddProductModal() {
   openModal(`
@@ -764,7 +953,8 @@ function showAddProductModal() {
       </div>
       <div class="form-group">
         <label>分类</label>
-        <input class="glass-input" id="product-category" placeholder="如：AI工具、设计资源、开发工具" />
+        <input class="glass-input" id="product-category" placeholder="选择或输入分类" list="category-options" />
+        ${categoryDatalist()}
       </div>
       <div class="form-group">
         <label>网址</label>
@@ -841,7 +1031,8 @@ function showEditProductModal(id) {
       </div>
       <div class="form-group">
         <label>分类</label>
-        <input class="glass-input" id="edit-product-category" value="${escapeHtml(product.category || '')}" />
+        <input class="glass-input" id="edit-product-category" value="${escapeHtml(product.category || '')}" list="category-options" />
+        ${categoryDatalist()}
       </div>
       <div class="form-group">
         <label>网址</label>
@@ -988,6 +1179,272 @@ function updateBgPreview(url) {
   } else {
     preview.style.removeProperty('--bg-image-preview');
     preview.classList.remove('has-image');
+  }
+}
+
+// --- Site Config Page (Admin) ---
+async function initConfigPage() {
+  await fetchConfig();
+  fillConfigForm();
+  renderCategoryList();
+
+  // 强调色实时预览
+  const colorInput = document.getElementById('cfg-accent-color');
+  const colorText = document.getElementById('cfg-accent-text');
+  if (colorInput && colorText) {
+    colorInput.addEventListener('input', () => {
+      colorText.textContent = colorInput.value;
+    });
+  }
+
+  // 保存全部设置
+  const saveBtn = document.getElementById('btn-save-config');
+  if (saveBtn) saveBtn.addEventListener('click', saveConfigFromForm);
+
+  // 分类管理
+  const addCatBtn = document.getElementById('btn-add-category');
+  if (addCatBtn) addCatBtn.addEventListener('click', addCategory);
+  const newCatInput = document.getElementById('new-category-name');
+  if (newCatInput) {
+    newCatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addCategory();
+      }
+    });
+  }
+
+  // 数据备份
+  const exportBtn = document.getElementById('btn-export');
+  if (exportBtn) exportBtn.addEventListener('click', exportData);
+  const importBtn = document.getElementById('btn-import');
+  const importFile = document.getElementById('import-file');
+  if (importBtn && importFile) {
+    importBtn.addEventListener('click', () => importFile.click());
+    importFile.addEventListener('change', async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (file) {
+        await importData(file);
+        e.target.value = '';
+      }
+    });
+  }
+}
+
+function fillConfigForm() {
+  const setVal = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value == null ? '' : value;
+  };
+  setVal('cfg-site-name', siteConfig.site_name);
+  setVal('cfg-logo-text', siteConfig.logo_text);
+  setVal('cfg-logo-emoji', siteConfig.logo_emoji);
+  setVal('cfg-hero-badge', siteConfig.hero_badge);
+  setVal('cfg-hero-title', siteConfig.hero_title);
+  setVal('cfg-hero-subtitle', siteConfig.hero_subtitle);
+  setVal('cfg-footer-text', siteConfig.footer_text);
+  setVal('cfg-analytics', siteConfig.analytics);
+
+  const colorInput = document.getElementById('cfg-accent-color');
+  if (colorInput) colorInput.value = siteConfig.accent_color || '#0071e3';
+  const colorText = document.getElementById('cfg-accent-text');
+  if (colorText) colorText.textContent = colorInput ? colorInput.value : siteConfig.accent_color || '#0071e3';
+
+  const cols = document.getElementById('cfg-grid-columns');
+  if (cols) cols.value = String(siteConfig.grid_columns || 4);
+
+  const showDesc = document.getElementById('cfg-show-desc');
+  if (showDesc) showDesc.checked = siteConfig.show_description !== false;
+
+  const anims = document.getElementById('cfg-animations');
+  if (anims) anims.checked = siteConfig.animations_enabled !== false;
+}
+
+function saveConfigFromForm() {
+  const val = (id) => {
+    const el = document.getElementById(id);
+    return el ? el.value.trim() : '';
+  };
+  siteConfig.site_name = val('cfg-site-name');
+  siteConfig.logo_text = val('cfg-logo-text');
+  siteConfig.logo_emoji = val('cfg-logo-emoji');
+  siteConfig.hero_badge = val('cfg-hero-badge');
+  siteConfig.hero_title = val('cfg-hero-title');
+  siteConfig.hero_subtitle = val('cfg-hero-subtitle');
+  siteConfig.footer_text = val('cfg-footer-text');
+  const analyticsEl = document.getElementById('cfg-analytics');
+  if (analyticsEl) siteConfig.analytics = analyticsEl.value.trim();
+
+  const colorInput = document.getElementById('cfg-accent-color');
+  if (colorInput && colorInput.value) siteConfig.accent_color = colorInput.value;
+
+  const cols = document.getElementById('cfg-grid-columns');
+  if (cols) siteConfig.grid_columns = parseInt(cols.value, 10) || 4;
+
+  const showDesc = document.getElementById('cfg-show-desc');
+  if (showDesc) siteConfig.show_description = showDesc.checked;
+
+  const anims = document.getElementById('cfg-animations');
+  if (anims) siteConfig.animations_enabled = anims.checked;
+
+  saveConfig().then(() => {
+    showToast('设置已保存');
+    applySiteConfig();
+  }).catch(() => {
+    showToast('保存失败', 'error');
+  });
+}
+
+function renderCategoryList() {
+  const list = document.getElementById('category-list');
+  if (!list) return;
+  if (!categories.length) {
+    list.innerHTML = '<div class="category-empty">暂无分类，添加后将在首页显示为筛选按钮</div>';
+    return;
+  }
+  list.innerHTML = categories.map((c, i) => `
+    <div class="category-item">
+      <span class="category-item-name">${escapeHtml(c)}</span>
+      <div class="actions">
+        <button class="glass-btn glass-btn-sm" onclick="moveCategory(${i}, -1)" title="上移" ${i === 0 ? 'disabled' : ''}>↑</button>
+        <button class="glass-btn glass-btn-sm" onclick="moveCategory(${i}, 1)" title="下移" ${i === categories.length - 1 ? 'disabled' : ''}>↓</button>
+        <button class="glass-btn glass-btn-sm glass-btn-danger" onclick="removeCategory(${i})" title="删除">删除</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function addCategory() {
+  const input = document.getElementById('new-category-name');
+  if (!input) return;
+  const name = input.value.trim();
+  if (!name) {
+    showToast('请输入分类名称', 'error');
+    return;
+  }
+  if (categories.includes(name)) {
+    showToast('该分类已存在', 'error');
+    return;
+  }
+  categories.push(name);
+  input.value = '';
+  renderCategoryList();
+  showToast('分类已添加，记得保存设置');
+}
+
+function moveCategory(index, dir) {
+  const target = index + dir;
+  if (target < 0 || target >= categories.length) return;
+  const tmp = categories[index];
+  categories[index] = categories[target];
+  categories[target] = tmp;
+  renderCategoryList();
+}
+
+function removeCategory(index) {
+  if (!confirm('确定删除该分类吗？产品会保留原分类标签。')) return;
+  categories.splice(index, 1);
+  renderCategoryList();
+  showToast('分类已删除，记得保存设置');
+}
+
+// --- 数据导出 ---
+async function exportData() {
+  try {
+    await fetchCustomCode();
+    getBgSettings();
+  } catch (e) { /* ignore */ }
+  const data = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    config: siteConfig,
+    categories,
+    products,
+    custom: { css: customCSS, js: customJS, html: customHTML },
+    bg: { imageUrl: bgImageUrl, glassEnabled: glassEnabled },
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `product-nav-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('数据已导出');
+}
+
+// --- 数据导入 ---
+async function importData(file) {
+  let data;
+  try {
+    data = JSON.parse(await file.text());
+  } catch {
+    showToast('文件格式错误', 'error');
+    return;
+  }
+  if (!data || typeof data !== 'object' || !Array.isArray(data.products)) {
+    showToast('无效的备份文件', 'error');
+    return;
+  }
+
+  // 本地恢复
+  products = data.products;
+  localStorage.setItem('products', JSON.stringify(products));
+  if (data.config && typeof data.config === 'object') {
+    siteConfig = { ...DEFAULT_SITE_CONFIG, ...data.config };
+    localStorage.setItem('site_config', JSON.stringify(siteConfig));
+  }
+  if (Array.isArray(data.categories)) {
+    categories = data.categories;
+    localStorage.setItem('categories', JSON.stringify(categories));
+  }
+  if (data.custom && typeof data.custom === 'object') {
+    ['css', 'js', 'html'].forEach(t => {
+      if (typeof data.custom[t] === 'string') localStorage.setItem(`custom_${t}`, data.custom[t]);
+    });
+  }
+  if (data.bg && typeof data.bg === 'object') {
+    localStorage.setItem('bg_image_url', data.bg.imageUrl || '');
+    localStorage.setItem('bg_glass_enabled', data.bg.glassEnabled === false ? 'false' : 'true');
+  }
+
+  // 尽力同步后端（后端不可用或未授权时仅保留本地）
+  try {
+    await apiRequest('/config', { method: 'POST', body: JSON.stringify({ config: siteConfig, categories }) });
+  } catch (e) { /* ignore */ }
+  for (const t of ['css', 'js', 'html']) {
+    try {
+      await apiRequest('/custom', { method: 'POST', body: JSON.stringify({ type: t, code: localStorage.getItem(`custom_${t}`) || '' }) });
+    } catch (e) { /* ignore */ }
+  }
+  try {
+    await syncProductsToServer(products);
+  } catch (e) { /* ignore */ }
+
+  // 刷新界面
+  fillConfigForm();
+  renderCategoryList();
+  renderAdminProducts();
+  showToast('数据导入成功');
+}
+
+// --- 将目标产品列表同步到后端（增/改/删） ---
+async function syncProductsToServer(targetProducts) {
+  const current = (await apiRequest('/products')).products || [];
+  const targetIds = new Set(targetProducts.map(p => p.id));
+  for (const p of targetProducts) {
+    if (current.some(c => c.id === p.id)) {
+      await apiRequest(`/products?id=${p.id}`, { method: 'PUT', body: JSON.stringify({ product: p }) });
+    } else {
+      await apiRequest('/products', { method: 'POST', body: JSON.stringify({ product: p }) });
+    }
+  }
+  for (const c of current) {
+    if (!targetIds.has(c.id)) {
+      await apiRequest(`/products?id=${c.id}`, { method: 'DELETE' });
+    }
   }
 }
 
