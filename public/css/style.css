@@ -1651,3 +1651,123 @@ body.no-animations *::after {
 body.hide-product-desc .product-desc {
   display: none;
 }
+
+/* ============================================
+   站点设置页 — iOS 26 水晶玻璃质感强化
+   ============================================ */
+
+/* 每张配置卡片：渐变底 + 彩色环境光 + 水晶高光
+   --tint-r/g/b 由 HTML 内联变量控制每张卡片的环境光色 */
+#page-config .config-card {
+  background:
+    radial-gradient(360px 200px at 6% 0%, rgba(var(--tint-r), var(--tint-g), var(--tint-b), 0.16), transparent 62%),
+    radial-gradient(300px 180px at 96% 8%, rgba(255, 255, 255, 0.60), transparent 60%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.46));
+  backdrop-filter: blur(40px) saturate(185%);
+  -webkit-backdrop-filter: blur(40px) saturate(185%);
+  border: 0.5px solid rgba(255, 255, 255, 0.66);
+  box-shadow:
+    0 8px 30px rgba(31, 45, 61, 0.07),
+    inset 0 1px 1px rgba(255, 255, 255, 0.80),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.12);
+  transition: box-shadow var(--transition-base), transform var(--transition-base);
+}
+
+#page-config .config-card:hover {
+  box-shadow:
+    0 14px 40px rgba(31, 45, 61, 0.10),
+    0 0 0 1px rgba(255, 255, 255, 0.45),
+    inset 0 1px 1px rgba(255, 255, 255, 0.90),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.15);
+}
+
+/* 区块标题：水晶图标徽章 + 渐变文字 */
+#page-config .config-section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.60);
+}
+
+#page-config .config-section-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  color: var(--accent-text);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.55));
+  border: 0.5px solid rgba(255, 255, 255, 0.75);
+  box-shadow: 0 2px 6px rgba(31, 45, 61, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.85);
+}
+
+#page-config .config-section-title {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  background: linear-gradient(120deg, var(--text-primary) 32%, var(--accent-text));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* 配置页输入框：水晶描边 + 内高光 */
+#page-config .glass-input {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.55));
+  border: 0.5px solid rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04), inset 0 0 0 0.5px rgba(255, 255, 255, 0.50);
+}
+
+#page-config .glass-input:focus {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.16), inset 0 1px 2px rgba(255, 255, 255, 0.60);
+}
+
+/* 分类项：水晶渐变底 + 悬浮上浮 */
+#page-config .category-item {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0.42));
+  border: 0.5px solid rgba(255, 255, 255, 0.62);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), inset 0 1px 1px rgba(255, 255, 255, 0.70);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+#page-config .category-item:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 5px 14px rgba(31, 45, 61, 0.09), inset 0 1px 1px rgba(255, 255, 255, 0.85);
+}
+
+/* 分类空态：水晶虚线框 */
+#page-config .category-empty {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.40), rgba(255, 255, 255, 0.18));
+  border: 1px dashed rgba(255, 255, 255, 0.65);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.50);
+}
+
+/* 开关：水晶轨道 + 发光激活态 */
+#page-config .toggle .toggle-track {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.10), rgba(0, 0, 0, 0.16));
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12), inset 0 0 0 0.5px rgba(255, 255, 255, 0.35);
+}
+
+#page-config .toggle .toggle-track::after {
+  background: linear-gradient(180deg, #ffffff, #eceff3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.20), inset 0 -1px 1px rgba(0, 0, 0, 0.04);
+}
+
+#page-config .toggle input:checked + .toggle-track {
+  background: linear-gradient(145deg, var(--accent-hover), var(--accent));
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.35), 0 0 10px rgba(0, 113, 227, 0.35);
+}
+
+/* 配置页主按钮：渐变水晶按钮 */
+#page-config .glass-btn-primary {
+  background: linear-gradient(145deg, var(--accent-hover), var(--accent));
+  box-shadow: 0 2px 8px rgba(0, 113, 227, 0.28), inset 0 1px 1px rgba(255, 255, 255, 0.30);
+}
