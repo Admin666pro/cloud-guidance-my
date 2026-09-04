@@ -97,6 +97,26 @@
           </button>
         </div>
 
+        <!-- 统计概览 -->
+        <div class="stats-dashboard" id="stats-dashboard">
+          <div class="stat-card">
+            <div class="stat-value" id="stat-total-products">0</div>
+            <div class="stat-label">产品总数</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-total-views">0</div>
+            <div class="stat-label">产品总访问量</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-preheat">0</div>
+            <div class="stat-label">Preheat 点击</div>
+          </div>
+          <div class="stat-card stat-card-wide">
+            <div class="stat-label" style="margin-bottom:0.5rem">热门产品 TOP 5</div>
+            <div id="stat-top-products"><div class="stat-top-empty">加载中...</div></div>
+          </div>
+        </div>
+
         <div class="glass" style="overflow:hidden;padding:0">
           <table class="admin-table">
             <thead>
@@ -104,13 +124,14 @@
                 <th style="width:40px">图标</th>
                 <th>名称</th>
                 <th>分类</th>
+                <th style="width:70px">访问量</th>
                 <th>描述</th>
-                <th style="width:200px">操作</th>
+                <th style="width:230px">操作</th>
               </tr>
             </thead>
             <tbody id="admin-products-body">
               <tr>
-                <td colspan="5" style="text-align:center;padding:3rem;color:var(--text-tertiary)">加载中...</td>
+                <td colspan="6" style="text-align:center;padding:3rem;color:var(--text-tertiary)">加载中...</td>
               </tr>
             </tbody>
           </table>
@@ -294,6 +315,15 @@
                 <option value="3">3 列</option>
                 <option value="4">4 列</option>
               </select>
+            </div>
+            <div class="form-group">
+              <label>默认主题</label>
+              <select class="glass-input" id="cfg-default-theme">
+                <option value="system">跟随系统</option>
+                <option value="light">亮色</option>
+                <option value="dark">暗色</option>
+              </select>
+              <p class="cfg-hint">未手动切换主题时使用的默认外观（访问者可在右上角切换）</p>
             </div>
           </div>
           <div class="glass" style="padding:0.5rem 1.25rem;margin-top:1rem">
