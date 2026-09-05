@@ -10,6 +10,20 @@
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
+  <script>
+    // 首帧前应用主题：用户手动选择 → 站点默认主题 → 跟随系统，避免白屏闪烁
+    try {
+      var pref = localStorage.getItem('theme_pref'), dark = pref === 'dark';
+      if (!dark && pref !== 'light') {
+        var cfg = null;
+        try { cfg = JSON.parse(localStorage.getItem('site_config') || 'null'); } catch (e) {}
+        var def = (cfg && cfg.default_theme) || 'system';
+        if (def === 'dark') dark = true;
+        else if (def !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) dark = true;
+      }
+      if (dark) document.body.classList.add('dark-mode');
+    } catch (e) {}
+  </script>
   <div class="login-page">
     <div class="login-card">
       <div class="login-header">

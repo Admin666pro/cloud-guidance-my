@@ -11,8 +11,18 @@
 </head>
 <body>
   <script>
-    // 首帧前应用已保存的主题，避免暗色模式用户看到白屏闪烁
-    try { if (localStorage.getItem('theme_pref') === 'dark') document.body.classList.add('dark-mode'); } catch (e) {}
+    // 首帧前应用主题：用户手动选择 → 站点默认主题 → 跟随系统，避免白屏闪烁
+    try {
+      var pref = localStorage.getItem('theme_pref'), dark = pref === 'dark';
+      if (!dark && pref !== 'light') {
+        var cfg = null;
+        try { cfg = JSON.parse(localStorage.getItem('site_config') || 'null'); } catch (e) {}
+        var def = (cfg && cfg.default_theme) || 'system';
+        if (def === 'dark') dark = true;
+        else if (def !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) dark = true;
+      }
+      if (dark) document.body.classList.add('dark-mode');
+    } catch (e) {}
   </script>
   <!-- Header -->
   <header class="header">

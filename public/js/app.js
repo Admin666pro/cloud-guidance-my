@@ -995,6 +995,7 @@ async function initAdminDashboard() {
 
   // Navigation
   document.querySelectorAll('.nav-item').forEach(item => {
+    if (!item.dataset.page) return; // 深浅色切换等非页面导航按钮
     item.addEventListener('click', (e) => {
       e.preventDefault();
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -1021,8 +1022,9 @@ async function initAdminDashboard() {
     addBtn.addEventListener('click', showAddProductModal);
   }
 
-  // 主题（后台跟随站点默认主题）
+  // 主题（后台跟随站点默认主题 / 系统外观，支持手动切换）
   applyTheme();
+  initThemeToggle();
 
   // Init code editor
   initCodeEditor();
