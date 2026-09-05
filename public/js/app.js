@@ -19,6 +19,9 @@ const ICONS = {
   box: `<svg class="icon-svg" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>`,
   tag: `<svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2z"/><path d="M7 7h.01"/></svg>`,
   image: `<svg class="icon-svg" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>`,
+  pin: `<svg class="icon-svg" viewBox="0 0 24 24"><path d="m14 4 6 6-2.5 2.5L15 10l-5 5 1.5 2.5L9 20l-5-5 2.5-2.5L9 14l5-5-2.5-2.5z"/></svg>`,
+  sun: `<svg class="icon-svg icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>`,
+  moon: `<svg class="icon-svg icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
 };
 
 // --- State ---
@@ -44,6 +47,7 @@ const DEFAULT_SITE_CONFIG = {
   analytics: '',
   accent_color: '#0071e3',
   grid_columns: 4,
+  default_theme: 'system',
   show_description: true,
   animations_enabled: true,
 };
@@ -330,9 +334,9 @@ async function adminLogin(password) {
     });
     return data;
   } catch (err) {
-    // 仅在后端不可达（网络错误，无 status）时启用本地降级；
+    // 仅在后端不可达（网络错误或无此端点 404）时启用本地降级；
     // 服务器明确拒绝（401/429 等）时不降级，避免绕过服务端的校验与限流
-    if (!err.status) {
+    if (!err.status || err.status === 404) {
       const localPassword = localStorage.getItem('admin_password') || 'admin123';
       const localPasswordHash = await sha256(localPassword);
       if (passwordHash === localPasswordHash) {
@@ -493,6 +497,92 @@ function applyAnalytics() {
   document.body.appendChild(div);
 }
 
+// --- 主题（暗色模式） ---
+function getThemePreference() {
+  try {
+    return localStorage.getItem('theme_pref') || '';
+  } catch {
+    return '';
+  }
+}
+
+function resolveTheme() {
+  const pref = getThemePreference();
+  if (pref === 'light' || pref === 'dark') return pref;
+  const defaultTheme = (siteConfig && siteConfig.default_theme) || 'system';
+  if (defaultTheme === 'light' || defaultTheme === 'dark') return defaultTheme;
+  // 跟随系统
+  try {
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  } catch {
+    return 'light';
+  }
+}
+
+function applyTheme() {
+  const theme = resolveTheme();
+  document.body.classList.toggle('dark-mode', theme === 'dark');
+  updateThemeToggleIcon();
+}
+
+function updateThemeToggleIcon() {
+  const dark = document.body.classList.contains('dark-mode');
+  document.querySelectorAll('.theme-toggle').forEach(btn => {
+    btn.classList.toggle('is-dark', dark);
+    btn.setAttribute('aria-label', dark ? '切换到亮色模式' : '切换到暗色模式');
+    btn.setAttribute('title', dark ? '切换到亮色模式' : '切换到暗色模式');
+  });
+}
+
+function initThemeToggle() {
+  document.querySelectorAll('.theme-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const next = document.body.classList.contains('dark-mode') ? 'light' : 'dark';
+      try {
+        localStorage.setItem('theme_pref', next);
+      } catch (e) { /* ignore */ }
+      applyTheme();
+    });
+  });
+}
+
+// --- 产品访问统计 ---
+let productStats = {};
+
+async function fetchProductStats() {
+  try {
+    const data = await apiRequest('/stats');
+    productStats = data.productClicks || {};
+  } catch {
+    try {
+      productStats = JSON.parse(localStorage.getItem('product_clicks') || '{}');
+    } catch {
+      productStats = {};
+    }
+  }
+  return productStats;
+}
+
+async function incrementProductView(productId) {
+  if (!productId) return;
+  // 乐观更新，即时反馈
+  productStats[productId] = (productStats[productId] || 0) + 1;
+  updateProductViewCount(productId);
+  try {
+    localStorage.setItem('product_clicks', JSON.stringify(productStats));
+  } catch (e) { /* ignore */ }
+  try {
+    await apiRequest('/stats', { method: 'POST', body: JSON.stringify({ productId }) });
+  } catch (e) { /* ignore */ }
+}
+
+function updateProductViewCount(productId) {
+  const count = productStats[productId] || 0;
+  document.querySelectorAll(`[data-view-for="${productId}"]`).forEach(el => {
+    el.textContent = `${count} 次访问`;
+  });
+}
+
 // --- Preheat 标签点击计数 ---
 function updatePreheatCount() {
   const el = document.getElementById('preheat-count');
@@ -577,9 +667,11 @@ function renderProducts(productsToRender, containerId = 'products-grid') {
 
   grid.innerHTML = productsToRender.map((product, idx) => {
     const cover = Array.isArray(product.images) && product.images[0] ? product.images[0] : '';
+    const views = productStats[product.id] || 0;
     return `
     <div class="product-card" style="animation-delay: ${idx * 0.03}s">
       <div class="product-card-inner" onclick="window.location.href='/product.html?id=${encodeURIComponent(product.id)}'">
+        ${product.pinned ? `<span class="pin-badge card-pin">${ICONS.pin} 置顶</span>` : ''}
         ${cover
           ? `<div class="product-cover"><img src="${escapeHtml(cover)}" alt="${escapeHtml(product.name)}" loading="lazy" onerror="this.style.display='none'" /></div>`
           : `<div class="product-icon">${product.icon || '📦'}</div>`}
@@ -588,6 +680,7 @@ function renderProducts(productsToRender, containerId = 'products-grid') {
         <div class="product-meta">
           ${product.category ? `<span class="product-tag">${escapeHtml(product.category)}</span>` : ''}
           ${product.url ? `<span>${getDomain(product.url)}</span>` : ''}
+          <span class="product-views" data-view-for="${escapeHtml(product.id)}">${views} 次访问</span>
         </div>
         ${product.url ? `
           <a class="product-link" href="${escapeHtml(product.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">
@@ -616,6 +709,8 @@ function filterProducts(query, category = 'all') {
       (p.category && p.category.toLowerCase().includes(q))
     );
   }
+  // 置顶产品优先展示，其余保持原顺序
+  filtered.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
   return filtered;
 }
 
@@ -642,6 +737,7 @@ async function initMainPage() {
     await fetchProducts();
     await fetchCustomCode();
     await fetchConfig();
+    await fetchProductStats();
   } catch (e) {
     console.warn('Init error:', e);
   }
@@ -651,6 +747,10 @@ async function initMainPage() {
 
   // Apply site config (brand + theme)
   applySiteConfig();
+
+  // 应用主题（暗色模式）并初始化切换按钮
+  applyTheme();
+  initThemeToggle();
 
   // Apply custom code
   applyCustomCode();
@@ -718,6 +818,8 @@ function renderProductDetail(container, product) {
             <div class="detail-meta">
               ${product.category ? `<span class="product-tag">${escapeHtml(product.category)}</span>` : ''}
               ${domain ? `<span class="detail-domain">${escapeHtml(domain)}</span>` : ''}
+              ${product.pinned ? `<span class="pin-badge">${ICONS.pin} 置顶</span>` : ''}
+              <span class="detail-views" data-view-for="${escapeHtml(product.id)}">${productStats[product.id] || 0} 次访问</span>
             </div>
           </div>
         </div>
@@ -771,12 +873,15 @@ async function initProductPage() {
     await fetchProducts();
     await fetchCustomCode();
     await fetchConfig();
+    await fetchProductStats();
   } catch (e) {
     console.warn('Init error:', e);
   }
 
   applyBgSettings();
   applySiteConfig();
+  applyTheme();
+  initThemeToggle();
   applyCustomCode();
 
   const yearEl = document.getElementById('footer-year');
@@ -808,6 +913,9 @@ async function initProductPage() {
   const siteName = siteConfig && siteConfig.site_name ? siteConfig.site_name : 'Product Nav';
   document.title = `${product.name} — ${siteName}`;
   renderProductDetail(container, product);
+
+  // 访问 +1（本次浏览）
+  incrementProductView(product.id);
 }
 
 // --- Init Admin Login ---
@@ -844,7 +952,10 @@ async function initAdminLogin() {
 async function initAdminDashboard() {
   requireAuth();
   await adminFetchProducts();
+  await fetchProductStats();
+  await fetchPreheatStats();
   renderAdminProducts();
+  renderAdminStats();
 
   // Navigation
   document.querySelectorAll('.nav-item').forEach(item => {
@@ -874,6 +985,9 @@ async function initAdminDashboard() {
     addBtn.addEventListener('click', showAddProductModal);
   }
 
+  // 主题（后台跟随站点默认主题）
+  applyTheme();
+
   // Init code editor
   initCodeEditor();
 
@@ -892,22 +1006,30 @@ function renderAdminProducts() {
   if (products.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="5" style="text-align:center;padding:3rem;color:var(--text-tertiary)">
+        <td colspan="6" style="text-align:center;padding:3rem;color:var(--text-tertiary)">
           暂无产品，点击上方"添加产品"按钮开始
         </td>
       </tr>
     `;
+    renderAdminStats();
     return;
   }
 
   tbody.innerHTML = products.map(p => `
     <tr>
       <td>${p.icon || '📦'}</td>
-      <td><strong style="color:var(--text-primary)">${escapeHtml(p.name)}</strong></td>
+      <td>
+        ${p.pinned ? '<span class="pin-badge">置顶</span> ' : ''}
+        <strong style="color:var(--text-primary)">${escapeHtml(p.name)}</strong>
+      </td>
       <td>${escapeHtml(p.category || '-')}</td>
+      <td><span class="stat-views">${productStats[p.id] || 0}</span></td>
       <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(p.description || '')}</td>
       <td>
         <div class="actions">
+          <button class="glass-btn glass-btn-sm" onclick="pinProduct('${p.id}')" title="${p.pinned ? '取消置顶' : '置顶'}">
+            ${ICONS.pin} ${p.pinned ? '取消置顶' : '置顶'}
+          </button>
           <button class="glass-btn glass-btn-sm" onclick="showEditProductModal('${p.id}')" title="编辑">
             ${ICONS.edit} 编辑
           </button>
@@ -918,6 +1040,52 @@ function renderAdminProducts() {
       </td>
     </tr>
   `).join('');
+
+  renderAdminStats();
+}
+
+// --- 置顶 / 取消置顶 ---
+async function pinProduct(id) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  try {
+    await adminUpdateProduct(id, { pinned: !p.pinned });
+    showToast(p.pinned ? '已取消置顶' : '已置顶，首页将优先展示');
+    await adminFetchProducts();
+    renderAdminProducts();
+  } catch (err) {
+    showToast('操作失败: ' + err.message, 'error');
+  }
+}
+
+// --- 后台统计概览 ---
+function renderAdminStats() {
+  const totalEl = document.getElementById('stat-total-products');
+  if (totalEl) totalEl.textContent = products.length;
+
+  const viewsEl = document.getElementById('stat-total-views');
+  if (viewsEl) {
+    viewsEl.textContent = Object.values(productStats).reduce((a, b) => a + (Number(b) || 0), 0);
+  }
+
+  const preheatEl = document.getElementById('stat-preheat');
+  if (preheatEl) preheatEl.textContent = preheatClicks;
+
+  const topEl = document.getElementById('stat-top-products');
+  if (topEl) {
+    const sorted = products
+      .map(p => ({ name: p.name, views: productStats[p.id] || 0 }))
+      .sort((a, b) => b.views - a.views)
+      .slice(0, 5);
+    topEl.innerHTML = sorted.length
+      ? sorted.map(p => `
+        <div class="stat-top-item">
+          <span class="stat-top-name">${escapeHtml(p.name)}</span>
+          <span class="stat-top-views">${p.views} 次</span>
+        </div>
+      `).join('')
+      : '<div class="stat-top-empty">暂无访问数据，产品被浏览后这里将显示热度排行</div>';
+  }
 }
 
 // --- 分类下拉候选（用于产品表单） ---
@@ -1187,6 +1355,7 @@ async function initConfigPage() {
   await fetchConfig();
   fillConfigForm();
   renderCategoryList();
+  applyTheme();
 
   // 强调色实时预览
   const colorInput = document.getElementById('cfg-accent-color');
@@ -1253,6 +1422,9 @@ function fillConfigForm() {
   const cols = document.getElementById('cfg-grid-columns');
   if (cols) cols.value = String(siteConfig.grid_columns || 4);
 
+  const theme = document.getElementById('cfg-default-theme');
+  if (theme) theme.value = siteConfig.default_theme || 'system';
+
   const showDesc = document.getElementById('cfg-show-desc');
   if (showDesc) showDesc.checked = siteConfig.show_description !== false;
 
@@ -1281,6 +1453,9 @@ function saveConfigFromForm() {
   const cols = document.getElementById('cfg-grid-columns');
   if (cols) siteConfig.grid_columns = parseInt(cols.value, 10) || 4;
 
+  const theme = document.getElementById('cfg-default-theme');
+  if (theme) siteConfig.default_theme = theme.value || 'system';
+
   const showDesc = document.getElementById('cfg-show-desc');
   if (showDesc) siteConfig.show_description = showDesc.checked;
 
@@ -1290,6 +1465,7 @@ function saveConfigFromForm() {
   saveConfig().then(() => {
     showToast('设置已保存');
     applySiteConfig();
+    applyTheme();
   }).catch(() => {
     showToast('保存失败', 'error');
   });
