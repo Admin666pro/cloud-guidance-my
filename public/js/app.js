@@ -3,6 +3,40 @@
    Apple Design Language + Background Management
    ============================================ */
 
+// --- 版本信息（每次功能更新后需同步更新） ---
+const APP_VERSION = '1.1.0';
+const APP_UPDATED = '2026-09-05';
+
+// 更新日志：最新版本在最前，新增条目时同步维护
+const APP_CHANGELOG = [
+  {
+    version: '1.1.0',
+    date: '2026-09-05',
+    title: '暗色模式 · 产品置顶 · 访问统计',
+    items: [
+      '新增暗色模式：支持跟随系统、右上角手动切换，后台可设置站点默认主题',
+      '新增产品置顶功能：后台一键置顶，首页优先展示并显示置顶角标',
+      '新增产品访问统计：详情页自动计数，首页/详情页/后台三处展示访问量',
+      '后台新增统计概览看板：产品总数 / 总访问量 / Preheat 点击 / 热门产品 TOP5',
+      '设置页新增数据管理：导出备份、导入恢复、重置本地数据',
+      '修复本地开发时 /api/auth 404 导致登录无法降级的问题',
+      '修复 Preheat 徽标样式失效问题',
+    ],
+  },
+  {
+    version: '1.0.0',
+    date: '2026-08-27',
+    title: '产品详情页与后台自定义功能',
+    items: [
+      '产品详情页：支持图片画廊、详细介绍、访问入口，管理员可在后台编辑',
+      'iOS 26 水晶玻璃质感全面改版（环境光、磨砂、渐变水晶描边、高光）',
+      '后台自定义：站点信息、主题定制、分类管理、数据备份与恢复',
+      'Preheat 标签点击计数（跳转 GitHub 求 Star）',
+      '登录安全：SHA-256 密码哈希 + HMAC JWT 认证 + 失败限流',
+    ],
+  },
+];
+
 // --- SVG Icons (inline) ---
 const ICONS = {
   search: `<svg class="icon-svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>`,
@@ -781,6 +815,7 @@ async function initMainPage() {
   // Footer year
   const yearEl = document.getElementById('footer-year');
   if (yearEl) yearEl.textContent = new Date().getFullYear();
+  renderFooterVersion();
 }
 
 // --- Render Product Detail ---
@@ -886,6 +921,7 @@ async function initProductPage() {
 
   const yearEl = document.getElementById('footer-year');
   if (yearEl) yearEl.textContent = new Date().getFullYear();
+  renderFooterVersion();
 
   if (!id) {
     container.innerHTML = `
@@ -996,6 +1032,9 @@ async function initAdminDashboard() {
 
   // Init site config page
   initConfigPage();
+
+  // Init settings page（版本信息 + 更新日志 + 数据管理）
+  initSettingsPage();
 }
 
 // --- Render Admin Products ---
@@ -1604,6 +1643,66 @@ async function importData(file) {
   renderCategoryList();
   renderAdminProducts();
   showToast('数据导入成功');
+}
+
+// --- 版本号渲染（首页/详情页 footer） ---
+function renderFooterVersion() {
+  const el = document.getElementById('footer-version');
+  if (el) el.textContent = APP_VERSION;
+}
+
+// --- 设置页：版本信息 + 更新日志 + 数据管理 ---
+function initSettingsPage() {
+  // 关于卡片：版本号与更新时间
+  const verEl = document.getElementById('about-version');
+  if (verEl) verEl.textContent = APP_VERSION;
+  const updatedEl = document.getElementById('about-updated');
+  if (updatedEl) updatedEl.textContent = APP_UPDATED;
+
+  // 更新日志
+  const listEl = document.getElementById('changelog-list');
+  if (listEl) {
+    listEl.innerHTML = APP_CHANGELOG.map(entry => `
+      <div class="changelog-entry">
+        <div class="changelog-head">
+          <span class="changelog-version">v${escapeHtml(entry.version)}</span>
+          <span class="changelog-date">${escapeHtml(entry.date)}</span>
+        </div>
+        <div class="changelog-title">${escapeHtml(entry.title)}</div>
+        <ul class="changelog-items">
+          ${entry.items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}
+        </ul>
+      </div>
+    `).join('');
+  }
+
+  // 数据管理：导出 / 导入 / 重置（设置页独立按钮）
+  const exportBtn = document.getElementById('btn-settings-export');
+  if (exportBtn) exportBtn.addEventListener('click', exportData);
+  const importBtn = document.getElementById('btn-settings-import');
+  const importFile = document.getElementById('import-file-settings');
+  if (importBtn && importFile) {
+    importBtn.addEventListener('click', () => importFile.click());
+    importFile.addEventListener('change', async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (file) {
+        await importData(file);
+        e.target.value = '';
+      }
+    });
+  }
+  const resetBtn = document.getElementById('btn-settings-reset');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      if (!confirm('确定要重置所有本地数据吗？此操作会清空本地存储的产品、设置与自定义代码，且不可恢复。')) return;
+      ['products', 'site_config', 'categories', 'custom_css', 'custom_js', 'custom_html',
+        'bg_image_url', 'bg_glass_enabled', 'theme_pref', 'product_clicks', 'preheat_clicks'].forEach(k => {
+        try { localStorage.removeItem(k); } catch (e) { /* ignore */ }
+      });
+      showToast('本地数据已重置');
+      setTimeout(() => window.location.reload(), 600);
+    });
+  }
 }
 
 // --- 将目标产品列表同步到后端（增/改/删） ---

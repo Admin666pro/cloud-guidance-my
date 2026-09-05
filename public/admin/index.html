@@ -393,7 +393,8 @@
           <h1>设置</h1>
         </div>
 
-        <div class="glass" style="padding:2rem">
+        <!-- 关于此项目 -->
+        <div class="glass" style="padding:2rem;margin-bottom:1.5rem">
           <h3 style="margin-bottom:1rem;font-size:1.125rem;font-weight:600">关于此项目</h3>
           <div style="display:flex;flex-direction:column;gap:1rem;color:var(--text-secondary);font-size:0.875rem">
             <p>
@@ -410,8 +411,30 @@
             </p>
             <hr style="border-color:rgba(0,0,0,0.06);margin:0.5rem 0">
             <p style="color:var(--text-tertiary);font-size:0.75rem">
-              版本 1.0.0
+              版本 v<span id="about-version">--</span> · 最近更新 <span id="about-updated">--</span>
             </p>
+          </div>
+        </div>
+
+        <!-- 数据管理 -->
+        <div class="glass" style="padding:2rem;margin-bottom:1.5rem">
+          <h3 style="margin-bottom:1rem;font-size:1.125rem;font-weight:600">数据管理</h3>
+          <p style="color:var(--text-secondary);font-size:0.875rem;margin-bottom:1.25rem">
+            备份站点全部数据（产品、分类、站点配置、自定义代码、背景设置），可随时导出保存或在其他设备恢复。
+          </p>
+          <div style="display:flex;flex-wrap:wrap;gap:0.75rem">
+            <button class="glass-btn glass-btn-primary" id="btn-settings-export">导出备份</button>
+            <button class="glass-btn" id="btn-settings-import">导入恢复</button>
+            <button class="glass-btn" id="btn-settings-reset" style="color:#ff3b30">重置本地数据</button>
+            <input type="file" id="import-file-settings" accept="application/json,.json" style="display:none" />
+          </div>
+        </div>
+
+        <!-- 更新日志 -->
+        <div class="glass" style="padding:2rem">
+          <h3 style="margin-bottom:1rem;font-size:1.125rem;font-weight:600">更新日志</h3>
+          <div id="changelog-list" style="display:flex;flex-direction:column;gap:1.25rem;color:var(--text-secondary);font-size:0.875rem">
+            <p style="color:var(--text-tertiary)">加载中...</p>
           </div>
         </div>
       </div>
